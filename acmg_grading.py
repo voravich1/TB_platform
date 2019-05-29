@@ -9,15 +9,18 @@ import sys
 """
 acmg_grading_db = sys.argv[1]
 
+first_flag = True
+header = []
 
+file = open(acmg_grading_db,'r')
 
-
-file = open(gene_file,'r')
 
 for line in file:
     line_noend = line.strip()
     info = line_noend.split("\t")
-
+    if first_flag==True:
+        header = info
+        first_flag = False
 
 
 
