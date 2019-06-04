@@ -1,30 +1,26 @@
 import sys
 from drug import Drug
 
-class grader:
-    __drugName=""
-    __graderMap={{}}
-    __gradeFile=""
-    __drug_map={}
+class Grader:
 
     def __init__(self,gradeFile):
+        self.__drugName = ""
+        self.__drug_map = {}
         self.__gradeFile = gradeFile
+        self.createGraderBackBone()
 
     def getDrugName(self):
         return self.__drugName
 
-    def addGraderData(self,input_geneName,input_hgvs,input_grade):
-        inner_graderMap={}
+    #def addGraderData(self,input_geneName,input_hgvs,input_grade):
+        #inner_graderMap={}
 
 
-        if input_geneName in self.__graderMap:
-            inner_graderMap = self.__graderMap.get(input_geneName)
-            if input_hgvs in inner_graderMap:
-            else:
-                inner_graderMap
-
-
-    def grading(self,input_geneName,input_hgvs):
+        #if input_geneName in self.__graderMap:
+            #inner_graderMap = self.__graderMap.get(input_geneName)
+            #if input_hgvs in inner_graderMap:
+            #else:
+                #inner_graderMap
 
     def createGraderBackBone(self):
         firstFlag = True
@@ -45,19 +41,29 @@ class grader:
                 else:
                     drug_object = Drug(drug_name)
 
-                if info[2] != "":
+                # begin add info to drug object
+                if info[2] != ".":
                     hgvs_list = info[2].split(",")
                     for hgvs in hgvs_list:
                         drug_object.addGradeRule(gene_name, hgvs, "high")
 
-                if info[3] != "":
+                if info[3] != ".":
                     hgvs_list = info[3].split(",")
                     for hgvs in hgvs_list:
                         drug_object.addGradeRule(gene_name, hgvs, "moderate")
 
-                if info[4] != "":
+                if info[4] != ".":
                     hgvs_list = info[4].split(",")
                     for hgvs in hgvs_list:
                         drug_object.addGradeRule(gene_name, hgvs, "minimal")
 
-                self.__drug_map.update(drug_name = drug_object)
+                self.__drug_map[drug_name] = drug_object
+
+    def getGrade(self,drug,gene,hgvs):
+
+        if drug in self.__drug_map:
+            drug_object = self.__drug_map.get(drug)
+            grade = drug_object.getGrade(gene,hgvs)
+            return grade
+        else:
+            return "No grade"

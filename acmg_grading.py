@@ -1,6 +1,8 @@
 #! /Users/worawich/miniconda3/envs/tbprofiler/bin/python
 
 import sys
+import acmg_grader
+import json
 
 """
     This program will grade drug resistance follow the acmg grading criteria
@@ -8,19 +10,12 @@ import sys
     second input is tbprofiler result txt format
 """
 acmg_grading_db = sys.argv[1]
+tbprofiler_json = sys.argv[2]
 
-first_flag = True
-header = []
+grader = acmg_grader.Grader(acmg_grading_db)
 
-file = open(acmg_grading_db,'r')
-
-
-for line in file:
-    line_noend = line.strip()
-    info = line_noend.split("\t")
-    if first_flag==True:
-        header = info
-        first_flag = False
+with open(tbprofiler_json) as data:
+    tbprofiler_reult = json.loads(data)
 
 
 
