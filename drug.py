@@ -20,6 +20,9 @@ class Drug:
         if hgvs in hgvsGradeMap:
             print("It should not happen. This hgvs and grade is not unique.\n")
             print("hgvs is = %s \t grade is = %s\n" % (hgvs, grade))
+            get_grade = hgvsGradeMap[hgvs]
+            addData = {hgvs : [get_grade, grade]}
+            hgvsGradeMap.update(addData)
         else:
             hgvsGradeMap[hgvs] = grade
 

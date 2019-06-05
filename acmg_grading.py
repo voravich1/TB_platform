@@ -14,9 +14,13 @@ tbprofiler_json = sys.argv[2]
 
 grader = acmg_grader.Grader(acmg_grading_db)
 
-with open(tbprofiler_json) as data:
-    tbprofiler_reult = json.loads(data)
+with open(tbprofiler_json, "r") as data:
+    tbprofiler_result = json.load(data)
+    print()
 
+
+
+    # check special case
 
 
 def convertOne2ThreeAmino(oneLetter):
