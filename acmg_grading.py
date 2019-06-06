@@ -1,6 +1,8 @@
 #! /Users/worawich/miniconda3/envs/tbprofiler/bin/python
 
 import sys
+from typing import List, Any, Dict
+
 import acmg_grader
 import json
 
@@ -11,12 +13,46 @@ import json
 """
 acmg_grading_db = sys.argv[1]
 tbprofiler_json = sys.argv[2]
+save_json_grade_result = sys.argv[3]
+
+gene_hgvs_map: Dict[str, list] = {}
 
 grader = acmg_grader.Grader(acmg_grading_db)
 
 with open(tbprofiler_json, "r") as data:
     tbprofiler_result = json.load(data)
-    print()
+
+    drug_variant = tbprofiler_result.get('dr_variants')
+
+    # loop first round for collect total gene hgvs pair
+    for variant in drug_variant:
+        gene_name = variant.get('gene_name')
+        hgvs = variant.get('change')
+        drug = variant.get('drug')
+
+        if gene_name in gene_hgvs_map:
+            hgvs_list = []
+            hgvs_list = gene_hgvs_map.get(gene_name)
+            hgvs_list.append(hgvs)
+            addData = {gene_name : hgvs_list}
+            gene_hgvs_map.update(addData)
+        else:
+            hgvs_list = []
+            hgvs_list.append(hgvs)
+            gene_hgvs_map[gene_name] = hgvs_list
+
+    # second loop for grading
+    for variant in drug_variant:
+        gene_name = variant.get('gene_name')
+        hgvs = variant.get('change')
+        drug = variant.get('drug')
+        grade = grader.getGradeSpecialCase(drug, gene_name, hgvs, gene_hgvs_map)
+        addData = {"grade" : grade}
+        variant.update(addData)
+
+with open(save_json_grade_result, 'w') as f:
+    json.dump(tbprofiler_result, f)
+
 
 
 

@@ -32,7 +32,7 @@ class Grader:
                     continue
 
                 info = line_noEnd.split("\t")
-                drug_name = info[0]
+                drug_name = info[0].lower()
                 gene_name = info[1]
 
                 # check existing drug object
@@ -59,11 +59,55 @@ class Grader:
 
                 self.__drug_map[drug_name] = drug_object
 
-    def getGrade(self,drug,gene,hgvs):
+    def getGrade(self, drug, gene, hgvs):
+
+        if drug in self.__drug_map:
+            drug_object = self.__drug_map.get(drug)
+            grade = drug_object.getGrade(gene, hgvs)
+            return grade
+        else:
+            return "No grade"
+
+    def getGradeSpecialCase(self, drug, gene, hgvs, totalGeneHgvs: dict):
 
         if drug in self.__drug_map:
             drug_object = self.__drug_map.get(drug)
             grade = drug_object.getGrade(gene,hgvs)
+            grade = self.checkSpecialCase(drug, gene, hgvs, totalGeneHgvs, grade)
             return grade
         else:
             return "No grade"
+
+    def checkSpecialCase(self, drug, gene, hgvs, totalGeneHgvs: dict, grade):
+        '''This fuction is a fixed fuction that suitable only for TB grading
+            If we have any update on grading criteria, this function should be re write
+            In order to match with the updated criteria
+
+            For now, grading criteria have two special case
+            '''
+
+        if drug == "isoniazid":
+            if gene == "katG" and hgvs == "p.Ser315=":
+                if "inhA" in totalGeneHgvs :
+                    if "p.Ser315=" in totalGeneHgvs.get("inhA"):
+                        return "high"
+
+            elif gene == "inhA" and hgvs == "p.Ser315=":
+                if "katG" in totalGeneHgvs :
+                    if "p.Ser315=" in totalGeneHgvs.get("katG"):
+                        return "high"
+
+        elif drug == "rifampicin":
+            if gene == "rpoB" and hgvs == "p.Asp516Gly":
+                if "rpoB" in totalGeneHgvs :
+                    if "p.Leu533Pro" in totalGeneHgvs.get("rpoB"):
+                        return "high"
+
+            elif gene == "rpoB" and hgvs == "p.Leu533Pro":
+                if "rpoB" in totalGeneHgvs :
+                    if "p.Asp516Gly" in totalGeneHgvs.get("rpoB"):
+                        return "high"
+                    else:
+                        return "moderate"
+
+        return grade
