@@ -9,6 +9,8 @@ vcfFile_snpeff_name = "/Users/worawich/Download_dataset/TB_platform_test/test_da
 
 drugDBFile_name = "/Users/worawich/Download_dataset/TB_platform_test/drug_db/tbprofiler_drugDB.json"
 
+json_result_file = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/97_lineage_drug_result.json"
+
 reader_vep_vcf = vcfpy.Reader.from_path(vcfFile_vep_name)
 reader_snpeff_vcf = vcfpy.Reader.from_path(vcfFile_snpeff_name)
 
@@ -41,6 +43,8 @@ drug_result_dict = dict()
 lineage_result_dict = dict()
 lineage_final_result_dict = dict()
 lineage_final_result_sorted_dict = dict()
+
+result_dict = dict()
 
 ###########
 ## Loop check hgvs field index in vep vcf
@@ -372,6 +376,22 @@ for lineage in lineage_result_dict:
 
 
 lineage_final_result_sorted_dict = OrderedDict(sorted(lineage_final_result_dict.items()))
+
+###########################################
+## Create json dict contain lineage and drug result
+## Then save to json file
+###########################################
+
+result_dict["lineage"] = lineage_final_result_sorted_dict
+result_dict["small_variant_dr"] = drug_result_dict
+js = json.dumps(result_dict, sort_keys=True, indent=4)
+
+
+json_write = open(json_result_file,'w')
+
+json_write.write(js)
+
+json_write.close()
 print("Done read vcf")
 
 
