@@ -9,7 +9,7 @@ vcfFile_snpeff_name = "/Users/worawich/Download_dataset/TB_platform_test/test_da
 
 drugDBFile_name = "/Users/worawich/Download_dataset/TB_platform_test/drug_db/tbprofiler_drugDB.json"
 
-json_result_file = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/97_lineage_drug_result.json"
+json_result_file = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/97_lineage_drug_result2.json"
 
 reader_vep_vcf = vcfpy.Reader.from_path(vcfFile_vep_name)
 reader_snpeff_vcf = vcfpy.Reader.from_path(vcfFile_snpeff_name)
@@ -377,13 +377,48 @@ for lineage in lineage_result_dict:
 
 lineage_final_result_sorted_dict = OrderedDict(sorted(lineage_final_result_dict.items()))
 
+
 ###########################################
-## Create json dict contain lineage and drug result
+## Classification of MDR and XDR (follow WHO)
+###########################################
+
+drug_all_hit = list()
+for key in drug_result_dict:
+    content = drug_result_dict[key]
+
+    drug_hit = content['Drug']
+
+    for drug in drug_hit:
+
+        if drug not in drug_all_hit:
+            drug_all_hit.append(drug)
+
+
+if ('isoniazid' in drug_all_hit) and ("rifampicin" in drug_all_hit):
+
+    # check fluoroquinolone derivative
+    if ('ciprofloxacin' in drug_all_hit) or ('Garenoxacin'  in drug_all_hit) or ('Gatifloxacin' in drug_all_hit) or ('Gemifloxacin' in drug_all_hit) or ('Levofloxacin' in drug_all_hit) or ('Moxifloxacin' in drug_all_hit):
+
+        # check with secondline injectable drug
+        if ('capreomycin' in drug_all_hit) or ('kanamycin' in drug_all_hit) or ('amikacin' in drug_all_hit):
+
+            drug_resist_type = "XDR"
+        else:
+            drug_resist_type = "MDR"
+    else:
+        drug_resist_type = "MDR"
+else:
+    drug_resist_type = ""
+###########################################
+
+###########################################
+## Create json dict contain lineage, drug result and drug resistant type
 ## Then save to json file
 ###########################################
 
 result_dict["lineage"] = lineage_final_result_sorted_dict
 result_dict["small_variant_dr"] = drug_result_dict
+result_dict["drug_resist_type"] = drug_resist_type
 js = json.dumps(result_dict, sort_keys=True, indent=4)
 
 
