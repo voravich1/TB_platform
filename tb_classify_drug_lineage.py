@@ -4,13 +4,32 @@ import vcfpy
 from collections import OrderedDict
 from pathlib import Path
 
-vcfFile_vep_name = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/97_typing_snp_vep_custom_ann_hgvs_vcftest.vcf"
+############################################
+## This script will use to classify lineage and drug resistant
+## And also classif MDR and XDR
+##
+## User must have prepare file as follow
+## 1. vcf file annotate by vep plus custom annotate on SNV lineage database (eg. SNV_lineage_DB_Full.vcf.gz) (To get lineage classify result)
+## 2. vcf file annotate by snpEff (To get precise HGVS of variant for classify drug resistant)
+## 3. drug database in json format (right now we use json file from TB profiler)
+##
+## User must specify 4 input
+## 1. absilute path of vcf file with vep annotattion
+## 2. absilute path of vcf file with snpEff annotation
+## 3. absilute path of drug DB json file
+## 4. absolute path of output json file name
+##
+## Note: this python need vcfpy library
+## can be use with conda env name "tbprofiler"
+############################################
 
-vcfFile_snpeff_name = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/97_typing_snp_snpeff.vcf"
+vcfFile_vep_name = sys.argv[0]
 
-drugDBFile_name = "/Users/worawich/Download_dataset/TB_platform_test/drug_db/tbprofiler_drugDB.json"
+vcfFile_snpeff_name = sys.argv[1]
 
-json_result_file = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/97_lineage_drug_result2.json"
+drugDBFile_name = sys.argv[2]
+
+json_result_file = sys.argv[3]
 
 reader_vep_vcf = vcfpy.Reader.from_path(vcfFile_vep_name)
 reader_snpeff_vcf = vcfpy.Reader.from_path(vcfFile_snpeff_name)
