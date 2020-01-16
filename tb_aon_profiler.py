@@ -1,48 +1,38 @@
+#!/usr/bin/env python
+
+"""This program is use for classify lineage and drug resistant form vcf that already annotate by snpEff
+    Suggest lineage DB is lin_db_6915 or lin_db_5654 (credit P'big mahidol, not yet ready to use)
+"""
+
 import sys
 import json
 import vcfpy
 from collections import OrderedDict
 from pathlib import Path
 
-############################################
-## This script will use to classify lineage and drug resistant
-## And also classif MDR and XDR
-##
-## User must prepare file as follow
-## 1. vcf file annotate by vep plus custom annotate on SNV lineage database (eg. SNV_lineage_DB_Full.vcf.gz) (To get lineage classify result)
-## 2. vcf file annotate by snpEff (To get precise HGVS of variant for classify drug resistant)
-## 3. drug database in json format (right now we use json file from TB profiler)
-##
-## User must specify 4 input
-## 1. absolute path of vcf file with vep annotattion
-## 2. absolute path of vcf file with snpEff annotation
-## 3. absolute path of drug DB json file
-## 4. absolute path of output json file name
-##
-## Note: this python need vcfpy library
-## can be use with conda env name "tbprofiler"
-############################################
+__author__ = "Worawich Phornsiricharoenphant"
+__copyright__ = ""
+__credits__ = ["Worawich Phornsiricharonphant","Wasna Viratyosin"]
+__license__ = "GPL-3.0"
+__version__ = "1.0"
+__maintainer__ = "Worawich Phornsiricharoenphant"
+__email__ = "worawich.ph@gmail.com"
+__status__ = "Development"
 
-vcfFile_vep_name = sys.argv[1]
 
-vcfFile_snpeff_name = sys.argv[2]
+vcfFile_snpeff_name = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/test/98_typing_snp_snpeff.vcf"      # vcf must be snnotate with snpEff
 
-drugDBFile_name = sys.argv[3]
+drugDBFile_name = "/Users/worawich/Download_dataset/TB_platform_test/drug_db/tbprofiler_drugDB.json"        # need file in json. format inside will be follow tbprfiler drug db format
 
-json_result_file = sys.argv[4]
+lineageDBFile_name = "/Volumes/10TBSeagateBackupPlus/NBT/TB_platform/database/lineage_db/lin_db_6915.txt"       # need file in tab dilimit format [pos|ref|alt|lineage] no header
 
-reader_vep_vcf = vcfpy.Reader.from_path(vcfFile_vep_name)
+json_result_file = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/test/98_lineage_drug_resultV2.json"     # result will be save in json format
+
+lineage_decision_threshold = 0.9        # lineage will be ofiicialy call as hit when 90% of marker was hit on each lineage
+lineage_decision_threshold_mode = True     # True mean use threshold to decide lineage
+lineage_decision_majority_mode = False      # True mea use majority vote to decide lineage
+
 reader_snpeff_vcf = vcfpy.Reader.from_path(vcfFile_snpeff_name)
-
-header_vep_vcf = reader_vep_vcf.header
-vep_header = header_vep_vcf.get_info_field_info('CSQ')
-vep_header_description = vep_header.description
-vep_field_order = vep_header_description.split(': ')[1].split('|')
-vep_field_query_index = dict()
-hgvsc_vep_idx = 0
-hgvsp_vep_idx = 0
-hgvsc_vep_dict = dict()
-hgvsp_vep_dict = dict()
 
 header_snpEff_vcf = reader_snpeff_vcf.header
 snpEff_header = header_snpEff_vcf.get_info_field_info('ANN')
@@ -67,21 +57,6 @@ lineage_final_result_sorted_dict = dict()
 result_dict = dict()
 
 ###########
-## Loop check hgvs field index in vep vcf
-###########
-count = 0
-for vep_field in vep_field_order:
-    vep_field_query_index[vep_field] = count
-    if(vep_field == 'HGVSc'):
-        hgvsc_vep_idx = count
-    elif(vep_field == 'HGVSp'):
-        hgvsp_vep_idx = count
-
-    count+=1
-
-#################################################
-
-###########
 ## Loop check hgvs field index in snpEff vcf
 ###########
 count = 0
@@ -97,9 +72,9 @@ for snpEff_field in snpEff_field_order:
 #################################################
 
 ##########
-# Loop file drug database
-# drug database of TBprofiler is json format
-# transform DB structure to NBT_AON structure [Gene => HGVS => Drug => Confident]
+## Loop file drug database
+## drug database of TBprofiler is json format
+## transform DB structure to NBT_AON structure [Gene => HGVS => Drug => Confident]
 ##########
 
 with open(drugDBFile_name) as json_file:
@@ -134,9 +109,35 @@ with open(drugDBFile_name) as json_file:
             drugDB_hgvs_dict[hgvs] = drugDB_drug_dict
 
         drugDB_gene_dict[gene] = drugDB_hgvs_dict
-
+json_file.close()
 ###########################################################
 
+##########
+## Loop file lineage database
+## lineage data file should be in tap delimit format [POS\tREF\tALT\tLIN]
+## No header in file
+## Transform info to dict for later checking
+##########
+lin_db_dict = dict()
+lin_db_total_dict = dict()
+with open(lineageDBFile_name,'r') as file:
+    for line in file:
+        data = line.splitlines()[0].split('\t')
+        pos = data[0]
+        ref = data[1]
+        alt = data[2]
+        lin = data[3]
+        key = pos + ref + alt
+        lin_db_dict[key] = lin
+
+        if lin in lin_db_total_dict:  ## add hit count to specific lineage
+            count = lin_db_total_dict[lin]
+            count += 1
+            lin_db_total_dict[lin] = count
+        else:
+            lin_db_total_dict[lin] = 1
+file.close()
+###########################################################
 
 ###########
 ## For snpEff_VCF
@@ -146,8 +147,37 @@ with open(drugDBFile_name) as json_file:
 ###########
 
 record_hit_ID = 0
+lin_hit_dict = dict()
 
 for record in reader_snpeff_vcf:
+
+    #########################################
+    #### Lineage classify part
+    #########################################
+
+    pos = str(record.POS)
+    ref_allel = record.REF
+    alt_list = record.ALT
+
+    if(len(alt_list) == 1): ## skip variant that have multiallele
+        alt_allel = alt_list[0].value
+        check_key = pos + ref_allel + alt_allel
+
+        if check_key in lin_db_dict:    ## check variant hit on lineage DB
+            lin = lin_db_dict[check_key]
+
+            if lin in lin_hit_dict:     ## add hit count to specific lineage
+                count = lin_hit_dict[lin]
+                count+=1
+                lin_hit_dict[lin] = count
+            else:
+                lin_hit_dict[lin] = 1
+
+    #################################################################
+
+    #########################################
+    #### Drug resistant classify Part
+    #########################################
 
     info = record.INFO
     record_ann = info.get('ANN')
@@ -260,143 +290,58 @@ for record in reader_snpeff_vcf:
         else:
             record_list = [record]
             hgvsp_snpEff_dict[hgvsp_ready] = record_list
-
+    #########################################################
 #########################################################
 
 print("Done read vcf")
 
-###########
-## For VEP_VCF
-## Loop Filter and Collect only record that give HGVS field
-## Goal for loop on VEP VCF is to get lineage information
-## (My understanding right now is "record that has HGVSc and HGVSp is variant record that occur on gene")
-###########
-
-record_hit_ID = 0
-
-for record in reader_vep_vcf:
-
-    info = record.INFO
-    record_csq = info.get('CSQ')
-
-
-    for vep_field in record_csq:
-        vep_field_list = vep_field.split("|")
-
-        if(vep_field_list[hgvsc_vep_idx] == "" and vep_field_list[hgvsp_vep_idx] == ""):
-            continue
-
-        vep_gene = vep_field_list[vep_field_query_index['Gene']]
-        #vep_lineage = vep_field_list[vep_field_query_index['TB_DB_LIN']]
-        vep_lineage = vep_field_list[len(vep_field_list)-1]
-
-        ####################################################
-        ## Count lineage
-        ####################################################
-        if vep_lineage != "":
-            if vep_lineage in lineage_result_dict:
-                lineage_count = lineage_result_dict[vep_lineage]
-                lineage_count += 1
-                lineage_result_dict[vep_lineage] = lineage_count
-            else:
-                lineage_result_dict[vep_lineage] = 1
-
-        ######################################################
-
-        hgvsc_info = vep_field_list[hgvsc_vep_idx]
-        hgvsp_info = vep_field_list[hgvsp_vep_idx]
-
-        if hgvsp_info != "":
-            hgvsc_ready = hgvsc_info.split(':', 1)[1]
-        else:
-            hgvsc_ready = hgvsc_info
-
-        if hgvsp_info != "":
-            hgvsp_ready = hgvsp_info.split(':', 1)[1]
-        else:
-            hgvsp_ready = hgvsp_info
-
-       # if hgvsp_ready == "p.Leu452Pro":
-        #    print("")
-
-        #if hgvsc_ready == 'c.-15C>T':
-         #   print(vep_gene)
-
-        #if hgvsp_ready == 'c.-15C>T':
-         #   print(vep_gene)
-
-        # check with database
-        if vep_gene in drugDB_gene_dict:
-            gene_hit_dict = drugDB_gene_dict[vep_gene]
-
-            record_hit_dict = dict()
-            if hgvsc_ready in gene_hit_dict:
-
-                record_hit_dict['Drug'] = gene_hit_dict[hgvsc_ready]
-                record_hit_dict['Ref'] = record.REF
-                record_hit_dict['Pos'] = record.POS
-
-                for i in range(len(vep_field_order)):
-                    record_hit_dict[vep_field_order[i]] = vep_field_list[i]
-
-                drug_result_dict[record_hit_ID] = record_hit_dict
-                record_hit_ID += 1
-
-            elif hgvsp_ready in gene_hit_dict:
-
-                record_hit_dict['Drug'] = gene_hit_dict[hgvsp_ready]
-                record_hit_dict['Ref'] = record.REF
-                record_hit_dict['Pos'] = record.POS
-
-                for i in range(len(vep_field_order)):
-                    record_hit_dict[vep_field_order[i]] = vep_field_list[i]
-
-                drug_result_dict[record_hit_ID] = record_hit_dict
-                record_hit_ID += 1
-
-        if hgvsc_ready in hgvsc_vep_dict:
-            #print("repeat!!" + hgvsc_ready)
-            record_list = hgvsc_vep_dict[hgvsc_ready]
-            record_list.append(record)
-            hgvsc_vep_dict[hgvsc_ready] = record_list
-        else:
-            record_list = [record]
-            hgvsc_vep_dict[hgvsc_ready] = record_list
-
-        if hgvsp_ready in hgvsp_vep_dict:
-            #print("repeat!!" + hgvsp_ready)
-            record_list = hgvsp_vep_dict[hgvsp_ready]
-            record_list.append(record)
-            hgvsp_vep_dict[hgvsp_ready] = record_list
-        else:
-            record_list = [record]
-            hgvsp_vep_dict[hgvsp_ready] = record_list
-
 #########################################################
 
+######################################
+## Decide which lineage belong to this sample
+######################################
+
+if lineage_decision_threshold_mode == True:
+    # Iterate over all the items in dictionary to find keys with max value
+    # key is lineage, value is hit count
+    for key, value in lin_hit_dict.items():
+        total_marker = lin_db_total_dict[key]
+
+        ## check hit count with threshold to decide final lineage result
+        if key == "lineage4" or key == "lineage4.9":   ## some special lineage need special treat to re calculate hit count
+            special_count = total_marker - value
+            if special_count >= (total_marker * lineage_decision_threshold):
+                lineage_final_result_dict[key] = special_count
+        else: ## normal lineage
+            if value >= (total_marker * lineage_decision_threshold):
+                lineage_final_result_dict[key] = value
+
+    lineage_final_result_sorted_dict = OrderedDict(sorted(lineage_final_result_dict.items())) ## sort dict by key
+#########################################################
 
 ######################################
 ## Select majority vote on lineage result
 ######################################
-itemMaxValue = max(lineage_result_dict.items(), key=lambda x: x[1])
 
+if lineage_decision_majority_mode == True:
 
-listOfMaxKeys = list()
-# Iterate over all the items in dictionary to find keys with max value
-for key, value in lineage_result_dict.items():
-    if value == itemMaxValue[1]:
-        listOfMaxKeys.append(key)
+    itemMaxValue = max(lin_hit_dict.items(), key=lambda x: x[1])
 
-#print('Keys with maximum Value in Dictionary : ', listOfKeys)
+    listOfMaxKeys = list()
+    # Iterate over all the items in dictionary to find keys with max value
+    for key, value in lin_hit_dict.items():
+        if value == itemMaxValue[1]:
+            listOfMaxKeys.append(key)
 
-for lineage in lineage_result_dict:
-    main_lineage = lineage.split(".")[0]
-    if main_lineage in listOfMaxKeys:
-        lineage_final_result_dict[lineage] = lineage_result_dict[lineage]
+    #print('Keys with maximum Value in Dictionary : ', listOfKeys)
 
+    for lineage in lin_hit_dict:
+        main_lineage = lineage.split(".")[0]
+        if main_lineage in listOfMaxKeys:
+           lineage_final_result_dict[lineage] = lin_hit_dict[lineage]
 
-lineage_final_result_sorted_dict = OrderedDict(sorted(lineage_final_result_dict.items()))
-
+    lineage_final_result_sorted_dict = OrderedDict(sorted(lineage_final_result_dict.items()))
+#########################################################
 
 ###########################################
 ## Classification of MDR and XDR (follow WHO)
@@ -448,9 +393,5 @@ json_write.write(js)
 
 json_write.close()
 print("Done read vcf")
-
-
-
-
 
 
