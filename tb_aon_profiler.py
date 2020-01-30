@@ -362,7 +362,7 @@ for key in drug_result_dict:
 if ('isoniazid' in drug_all_hit) and ("rifampicin" in drug_all_hit):
 
     # check fluoroquinolone derivative
-    if ('ciprofloxacin' in drug_all_hit) or ('Garenoxacin'  in drug_all_hit) or ('Gatifloxacin' in drug_all_hit) or ('Gemifloxacin' in drug_all_hit) or ('Levofloxacin' in drug_all_hit) or ('Moxifloxacin' in drug_all_hit):
+    if ('ciprofloxacin' in drug_all_hit) or ('garenoxacin'  in drug_all_hit) or ('gatifloxacin' in drug_all_hit) or ('gemifloxacin' in drug_all_hit) or ('levofloxacin' in drug_all_hit) or ('moxifloxacin' in drug_all_hit):
 
         # check with secondline injectable drug
         if ('capreomycin' in drug_all_hit) or ('kanamycin' in drug_all_hit) or ('amikacin' in drug_all_hit):
