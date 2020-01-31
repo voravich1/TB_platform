@@ -22,7 +22,13 @@ __maintainer__ = "Worawich Phornsiricharoenphant"
 __email__ = "worawich.ph@gmail.com"
 __status__ = "Development"
 
-input_folder = ""
+
+parser = argparse.ArgumentParser(description='ADD YOUR DESCRIPTION HERE')
+parser.add_argument('-i', '--input', help='Input folder name', required=True)
+parser.add_argument('-o', '--output', help='Absolute path of Output folder', required=True)
+parser.add_argument('-t', '--target', help='Extension of target input file Ex. ".vcf", ".vcf.gz"', required=True)
+
+args = parser.parse_args()
 
 
 def get_in_file_list(in_dir, file_name_part, path_num=1, alternative_directory=None):
@@ -52,16 +58,18 @@ def get_in_file_list(in_dir, file_name_part, path_num=1, alternative_directory=N
 def create_itol_lineage_drug_annotation_file(in_dir, out_dir, file_target=".json"):
     lineage_itol_path = os.path.join(out_dir, "lineage.itol.txt")
     drug_itol_path = os.path.join(out_dir, "drug_resist.itol.txt")
+    drug_conf_itol_path = os.path.join(out_dir, "drug_resist_confident.itol.txt")
     drug_typ_itol_path = os.path.join(out_dir, "drug_typ.itol.txt")
 
     lineage_itol = open(lineage_itol_path, 'w')
     drug_itol = open(drug_itol_path, 'w')
+    drug_conf_itol = open(drug_conf_itol_path, 'w')
     drug_typ_itol = open(drug_typ_itol_path, 'w')
 
     #### initiate header of lineage itol anotation file ####
 
     lineage_itol.write("DATASET_COLORSTRIP\n")
-    lineage_itol.write("SEPARATOR\tTAB\n")
+    lineage_itol.write("SEPARATOR TAB\n")
     lineage_itol.write("DATASET_LABEL\tLineage\n")
     lineage_itol.write("COLOR\t#ff0000\n\n")
 
@@ -79,11 +87,11 @@ def create_itol_lineage_drug_annotation_file(in_dir, out_dir, file_target=".json
     #### initiate header of drug resist itol anotation file ####
 
     drug_itol.write("DATASET_BINARY\n")
-    drug_itol.write("SEPARATOR\tTAB\n")
+    drug_itol.write("SEPARATOR TAB\n")
     drug_itol.write("DATASET_LABEL\tDrugs\n")
     drug_itol.write("COLOR\t#ff0000\n\n")
 
-    drug_itol.write("SHOW_LEBELS\t1\n")
+    drug_itol.write("SHOW_LABELS\t1\n")
     drug_itol.write("FIELD_SHAPES\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\n")
     drug_itol.write("FIELD_COLORS\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\n")
     drug_itol.write("FIELD_LABELS\trifampicin\tisoniazid\tethambutol\tpyrazinamide\tstreptomycin\tfluoroquinolones\taminoglycosides\tkanamycin\tamikacin\tcapreomycin\tethionamide\tpara-aminosalicylic_acid\tclofazimine\tlinezolid\tbedaquiline\n\n")
@@ -96,36 +104,78 @@ def create_itol_lineage_drug_annotation_file(in_dir, out_dir, file_target=".json
     #### initiate header of drug resist type itol anotation file ####
 
     drug_typ_itol.write("DATASET_COLORSTRIP\n")
-    drug_typ_itol.write("SEPARATOR\tTAB\n")
+    drug_typ_itol.write("SEPARATOR TAB\n")
     drug_typ_itol.write("DATASET_LABEL\tDrug-Resistant\n")
     drug_typ_itol.write("COLOR\t#ff0000\n\n")
 
     drug_typ_itol.write("LEGEND_TITLE\tDrug resistance\n")
     drug_typ_itol.write("LEGEND_SHAPES\t1\t1\t1\t1\n")
     drug_typ_itol.write("LEGEND_COLORS\t#80FF00\t#7fe5f0\t#8000FF\t#FF0000\n")
-    drug_typ_itol.write("LEGEND_LABELS\tSensitive\tDrug-resisant\tMDR\tXDR\n\n")
+    drug_typ_itol.write("LEGEND_LABELS\tSensitive\tDrug-resistant\tMDR\tXDR\n\n")
 
     drug_typ_itol.write("DATA\n")
 
     drug_typ_color_map = {"sensitive":"#80FF00","resistant":"#7fe5f0","MDR":"#8000FF","XDR":"#FF0000"}
     ################################################
 
+    #### initiate header of drug resist confident itol anotation file ####
+
+    drug_conf_itol.write("DATASET_EXTERNALSHAPE\n")
+    drug_conf_itol.write("SEPARATOR TAB\n")
+    drug_conf_itol.write("DATASET_LABEL\tDrugs with confident\n")
+    drug_conf_itol.write("COLOR\t#ff0000\n\n")
+
+    drug_conf_itol.write("SHOW_VALUES\t0\n")
+    drug_conf_itol.write("FIELD_SHAPES\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\n")
+    drug_conf_itol.write("FIELD_COLORS\t#5E5E5E\t#AC8E68\t#FF453A\t#32D74B\t#0A84FF\t#FF9F0A\t#FFD60A\t#BF5AF2\t#64D2FF\t#3F638B\t#FFFC00\t#007D7D\t#4E8F00\t#011893\t#FF7E79\n")
+    drug_conf_itol.write("FIELD_LABELS\trifampicin\tisoniazid\tethambutol\tpyrazinamide\tstreptomycin\tfluoroquinolones\taminoglycosides\tkanamycin\tamikacin\tcapreomycin\tethionamide\tpara-aminosalicylic_acid\tclofazimine\tlinezolid\tbedaquiline\n\n")
+
+    drug_conf_itol.write("LEGEND_TITLE\tDrugs\n")
+    drug_conf_itol.write("LEGEND_SHAPES\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\n")
+    drug_conf_itol.write("LEGEND_COLORS\t#5E5E5E\t#AC8E68\t#FF453A\t#32D74B\t#0A84FF\t#FF9F0A\t#FFD60A\t#BF5AF2\t#64D2FF\t#3F638B\t#FFFC00\t#007D7D\t#4E8F00\t#011893\t#FF7E79\n")
+    drug_conf_itol.write("LEGEND_LABELS\trifampicin\tisoniazid\tethambutol\tpyrazinamide\tstreptomycin\tfluoroquinolones\taminoglycosides\tkanamycin\tamikacin\tcapreomycin\tethionamide\tpara-aminosalicylic_acid\tclofazimine\tlinezolid\tbedaquiline\n\n")
+
+    drug_conf_itol.write("DATA\n")
+
+    drug_conf_template_map = {"rifampicin": "0", "isoniazid": "0", "ethambutol": "0", "pyrazinamide": "0",
+                         "streptomycin": "0", "fluoroquinolones": "0", "aminoglycosides": "0", "kanamycin": "0",
+                         "amikacin": "0", "capreomycin": "0", "ethionamide": "0", "para-aminosalicylic_acid": "0",
+                         "clofazimine": "0", "linezolid": "0", "bedaquiline": "0"}
+    ################################################
+
     list_file = get_in_file_list(in_dir, file_target)
     for file in list_file:
         with open(file) as fp:
+
             data_dict = json.load(fp)
 
-            #### Extract Data ####
+            sample_name = data_dict["sample_name"]
 
-            master_lineage_list = dict()
+            #### Extract lineage Data ####
             lineage_dict = data_dict["lineage"]
-
+            main_lineage_list = list()
             for lineage in lineage_dict:
-                #### convert lineageBOV and lineageBOV_AFRI to bovis then check main first then check for mix infect
+                if lineage == "lineageBOV" or lineage == "lineageBOV_AFRI":
+                    lineage = "bovis"
 
+                if lineage in lineage_color_map:
+                    main_lineage_list.append(lineage)
 
+            if len(main_lineage_list) > 1 :
+                final_lineage_judgement = "mixed"
+            elif len(main_lineage_list) == 1:
+                final_lineage_judgement = main_lineage_list[0]
+            else:
+                final_lineage_judgement = "other"
+            #######################
+
+            #### Export lineage Data to lineage itol annotation file ####
+            lineage_color = lineage_color_map[final_lineage_judgement]
+            lineage_itol.write(sample_name + "\t" + lineage_color + "\n")
+            #######################
+
+            #### Extract drug Data ####
             master_drug_dict = dict()
-            drug_resist_type = data_dict["drug_resist_type"]
             drug_resist_dict = data_dict["small_variant_dr"]
             drug_resist_list = list()
             for key in drug_resist_dict:
@@ -133,20 +183,48 @@ def create_itol_lineage_drug_annotation_file(in_dir, out_dir, file_target=".json
                 drug_info_dict = info_variant_dict["Drug"]
 
                 for drug in drug_info_dict:
+
+                    if drug in drug_template_map:
+                        drug_template_map[drug] = "1"
+
                     if drug not in master_drug_dict:
-                        confident = drug_info_dict[drug]
-                        master_drug_dict[drug] = confident
+                        confidence = drug_info_dict[drug]
+
+                        if confidence == "high":
+                            drug_conf_template_map[drug] = "400"
+                        elif confidence == "moderate":
+                            drug_conf_template_map[drug] = "300"
+                        elif confidence == "low":
+                            drug_conf_template_map[drug] = "200"
+                        elif confidence == "indeterminate":
+                            drug_conf_template_map[drug] = "100"
+            #######################
+            #### Export drug Data to drug itol annotation file ####
+            info_list = [sample_name]
+            for drug in drug_template_map:
+                info_list.append(drug_template_map[drug])
+            write_content = '\t'.join(info_list)
+            drug_itol.write(write_content + "\n")
+            #######################
+            #### Export drug with cofidence Data to drug confidence itol annotation file ####
+            info_list = [sample_name]
+            for drug in drug_conf_template_map:
+                info_list.append(drug_conf_template_map[drug])
+            write_content = '\t'.join(info_list)
+            drug_conf_itol.write(write_content + "\n")
             #######################
 
-            #### create itol lineage annotation file ####
+            #### Extract drug type Data and Export to drug type itol annotation file ####
+            drug_resist_type = data_dict["drug_resist_type"]
+            drug_typ_itol.write(sample_name+"\t"+drug_typ_color_map[drug_resist_type]+"\n")
+            #######################
 
+    drug_itol.close()
+    drug_conf_itol.close()
+    drug_typ_itol.close()
+    lineage_itol.close()
 
+# --------main---------
 
-            #############################################
-
-
-            lineage_list = data_dict["lineage"]
-
-
-
-f_list = get_in_file_list(in_dir, input_file_extension)
+#f_list = get_in_file_list(args.input, args.target)
+create_itol_lineage_drug_annotation_file(args.input, args.output, file_target=args.target)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""This program is use for classify lineage and drug resistant form vcf that already annotate by snpEff
+"""This program is use for classify lineage and drug resistant form vcf [single sample vcf] that already annotate by snpEff
     Suggest lineage DB is lin_db_6915 or lin_db_5654 (credit P'big mahidol, not yet ready to use)
 """
 
@@ -26,13 +26,15 @@ drugDBFile_name = "/Users/worawich/Download_dataset/TB_platform_test/drug_db/tbp
 
 lineageDBFile_name = "/Volumes/10TBSeagateBackupPlus/NBT/TB_platform/database/lineage_db/lin_db_6915.txt"       # need file in tab dilimit format [pos|ref|alt|lineage] no header
 
-json_result_file = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/test/98_lineage_drug_resultV2.json"     # result will be save in json format
+json_result_file = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/test/98_lineage_drug_resultV4.json"     # result will be save in json format
 
 lineage_decision_threshold = 0.9        # lineage will be ofiicialy call as hit when 90% of marker was hit on each lineage
 lineage_decision_threshold_mode = True     # True mean use threshold to decide lineage
 lineage_decision_majority_mode = False      # True mea use majority vote to decide lineage
 
 reader_snpeff_vcf = vcfpy.Reader.from_path(vcfFile_snpeff_name)
+
+samplename = reader_snpeff_vcf.header.samples.names[0] ## this will return list of sample name in a header row of vcf
 
 header_snpEff_vcf = reader_snpeff_vcf.header
 snpEff_header = header_snpEff_vcf.get_info_field_info('ANN')
@@ -358,22 +360,24 @@ for key in drug_result_dict:
         if drug not in drug_all_hit:
             drug_all_hit.append(drug)
 
+if len(drug_all_hit) == 0:
+    drug_resist_type = "sensitive"
+else:
+    if ('isoniazid' in drug_all_hit) and ("rifampicin" in drug_all_hit):
 
-if ('isoniazid' in drug_all_hit) and ("rifampicin" in drug_all_hit):
+        # check fluoroquinolone derivative
+        if ('ciprofloxacin' in drug_all_hit) or ('garenoxacin'  in drug_all_hit) or ('gatifloxacin' in drug_all_hit) or ('gemifloxacin' in drug_all_hit) or ('levofloxacin' in drug_all_hit) or ('moxifloxacin' in drug_all_hit):
 
-    # check fluoroquinolone derivative
-    if ('ciprofloxacin' in drug_all_hit) or ('garenoxacin'  in drug_all_hit) or ('gatifloxacin' in drug_all_hit) or ('gemifloxacin' in drug_all_hit) or ('levofloxacin' in drug_all_hit) or ('moxifloxacin' in drug_all_hit):
+            # check with secondline injectable drug
+            if ('capreomycin' in drug_all_hit) or ('kanamycin' in drug_all_hit) or ('amikacin' in drug_all_hit):
 
-        # check with secondline injectable drug
-        if ('capreomycin' in drug_all_hit) or ('kanamycin' in drug_all_hit) or ('amikacin' in drug_all_hit):
-
-            drug_resist_type = "XDR"
+                drug_resist_type = "XDR"
+            else:
+                drug_resist_type = "MDR"
         else:
             drug_resist_type = "MDR"
     else:
-        drug_resist_type = "MDR"
-else:
-    drug_resist_type = ""
+        drug_resist_type = "resistant"
 ###########################################
 
 ###########################################
@@ -381,6 +385,7 @@ else:
 ## Then save to json file
 ###########################################
 
+result_dict["sample_name"] = samplename
 result_dict["lineage"] = lineage_final_result_sorted_dict
 result_dict["small_variant_dr"] = drug_result_dict
 result_dict["drug_resist_type"] = drug_resist_type

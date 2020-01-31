@@ -1,6 +1,10 @@
 import sys
 from drug import Drug
 
+#### Grade idicator will have 4 indicator
+# 1.high  2.moderate  3.low  4.indeterminate
+#########
+
 class Grader:
 
     def __init__(self,gradeFile):
@@ -55,7 +59,7 @@ class Grader:
                 if info[4] != ".":
                     hgvs_list = info[4].split(",")
                     for hgvs in hgvs_list:
-                        drug_object.addGradeRule(gene_name, hgvs, "minimal")
+                        drug_object.addGradeRule(gene_name, hgvs, "low")
 
                 self.__drug_map[drug_name] = drug_object
 
@@ -66,7 +70,7 @@ class Grader:
             grade = drug_object.getGrade(gene, hgvs)
             return grade
         else:
-            return "No grade"
+            return "indeterminate"
 
     def getGradeSpecialCase(self, drug, gene, hgvs, totalGeneHgvs: dict):
 
@@ -76,7 +80,7 @@ class Grader:
             grade = self.checkSpecialCase(drug, gene, hgvs, totalGeneHgvs, grade)
             return grade
         else:
-            return "No grade"
+            return "indeterminate"
 
     def checkSpecialCase(self, drug, gene, hgvs, totalGeneHgvs: dict, grade):
         '''This fuction is a fixed fuction that suitable only for TB grading
