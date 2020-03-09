@@ -8,6 +8,8 @@ import sys
 import json
 import vcfpy
 from collections import OrderedDict
+import argparse
+import os
 from pathlib import Path
 
 __author__ = "Worawich Phornsiricharoenphant"
@@ -19,22 +21,42 @@ __maintainer__ = "Worawich Phornsiricharoenphant"
 __email__ = "worawich.ph@gmail.com"
 __status__ = "Development"
 
+this_file_dir = os.path.dirname(os.path.realpath(__file__))
+drugDB = os.path.join(this_file_dir,"db","tbprofiler_drugDB.json")
+linDB = os.path.join(this_file_dir,"db","lin_db_6915.txt")
 
-vcfFile_snpeff_name = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/test/98_typing_snp_snpeff.vcf"      # vcf must be snnotate with snpEff
+#vcfFile_snpeff_name = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/test/98_typing_snp_snpeff.vcf"      # vcf must be snnotate with snpEff
 
-drugDBFile_name = "/Users/worawich/Download_dataset/TB_platform_test/drug_db/tbprofiler_drugDB.json"        # need file in json. format inside will be follow tbprfiler drug db format
+#drugDBFile_name = "/Users/worawich/Download_dataset/TB_platform_test/drug_db/tbprofiler_drugDB.json"        # need file in json. format inside will be follow tbprfiler drug db format
 
-lineageDBFile_name = "/Volumes/10TBSeagateBackupPlus/NBT/TB_platform/database/lineage_db/lin_db_6915.txt"       # need file in tab dilimit format [pos|ref|alt|lineage] no header
+#lineageDBFile_name = "/Volumes/10TBSeagateBackupPlus/NBT/TB_platform/database/lineage_db/lin_db_6915.txt"       # need file in tab dilimit format [pos|ref|alt|lineage] no header
 
-json_result_file = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/test/98_lineage_drug_resultV4.json"     # result will be save in json format
+#json_result_file = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/test/98_lineage_drug_resultV4.json"     # result will be save in json format
 
-lineage_decision_threshold = 0.9        # lineage will be ofiicialy call as hit when 90% of marker was hit on each lineage
+#lineage_decision_threshold = 0.9        # lineage will be ofiicialy call as hit when 90% of marker was hit on each lineage
 lineage_decision_threshold_mode = True     # True mean use threshold to decide lineage
 lineage_decision_majority_mode = False      # True mea use majority vote to decide lineage
+
+parser = argparse.ArgumentParser(description='ADD YOUR DESCRIPTION HERE')
+parser.add_argument('-i', '--input', help='Input VCF file name (can be vcf.gz)', required=True)
+parser.add_argument('-o', '--output', help='Absolute path of Output folder', required=True)
+parser.add_argument('-d', '--drdb', help='adsolute path to drug database file (in .json format like tbprofiler used)', nargs='?', const=1, default=drugDB, required=False)
+parser.add_argument('-l', '--lindb', help='adsolute path to lineage database file (in tab dilimit format [pos\tref\talt\tlineage])', nargs='?', const=1, default=linDB, required=False)
+parser.add_argument('-e', '--threshold', help='lineage decision threshold value 0 to 1 default 0.9 which refer to 90%', const=1, nargs='?', type=int, default=0.9, required=False)
+
+args = parser.parse_args()
+
+vcfFile_snpeff_name = args.input
+drugDBFile_name = args.drdb
+lineageDBFile_name = args.lindb
+lineage_decision_threshold = args.threshold    # lineage will be ofiicialy call as hit when 90% of marker was hit on each lineage
 
 reader_snpeff_vcf = vcfpy.Reader.from_path(vcfFile_snpeff_name)
 
 samplename = reader_snpeff_vcf.header.samples.names[0] ## this will return list of sample name in a header row of vcf
+
+output_json_file_name = samplename + "_result_test.json"
+json_result_file = os.path.join(args.output, output_json_file_name)
 
 header_snpEff_vcf = reader_snpeff_vcf.header
 snpEff_header = header_snpEff_vcf.get_info_field_info('ANN')
@@ -97,7 +119,7 @@ with open(drugDBFile_name) as json_file:
             drug_dict = variant_dict['drugs']
             hgvs = variant_dict['hgvs_mutation']
 
-            if hgvs == "p.Leu452Pro":
+            if hgvs == "p.Ser450Leu": #"p.Lys43Arg" p.Leu452Pro
                 print()
 
             drugDB_drug_dict = dict()
@@ -207,7 +229,7 @@ for record in reader_snpeff_vcf:
         else:
             hgvsp_ready = hgvsp_info
 
-        if hgvsp_ready == "p.Leu452Pro":
+        if hgvsp_ready == "p.Ser450Leu": #"p.Lys43Arg" "p.Leu452Pro"
             print("")
 
         if hgvsc_ready == 'c.-15C>T':

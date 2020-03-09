@@ -92,13 +92,12 @@ def create_itol_lineage_drug_annotation_file(in_dir, out_dir, file_target=".json
     drug_itol.write("COLOR\t#ff0000\n\n")
 
     drug_itol.write("SHOW_LABELS\t1\n")
-    drug_itol.write("FIELD_SHAPES\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\n")
-    drug_itol.write("FIELD_COLORS\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\n")
-    drug_itol.write("FIELD_LABELS\trifampicin\tisoniazid\tethambutol\tpyrazinamide\tstreptomycin\tfluoroquinolones\taminoglycosides\tkanamycin\tamikacin\tcapreomycin\tethionamide\tpara-aminosalicylic_acid\tclofazimine\tlinezolid\tbedaquiline\n\n")
+    drug_itol.write("FIELD_SHAPES\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\n")
+    drug_itol.write("FIELD_COLORS\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\tblack\n")
+    drug_itol.write("FIELD_LABELS\trifampicin\tisoniazid\tethambutol\tpyrazinamide\tstreptomycin\tfluoroquinolones\taminoglycosides\tkanamycin\tamikacin\tcapreomycin\tethionamide\tpara-aminosalicylic_acid\tclofazimine\tlinezolid\tbedaquiline\tciprofloxacin\tlevofloxacin\tmoxifloxacin\tofloxacin\n\n")
 
     drug_itol.write("DATA\n")
 
-    drug_template_map = {"rifampicin":"0","isoniazid":"0","ethambutol":"0","pyrazinamide":"0","streptomycin":"0","fluoroquinolones":"0","aminoglycosides":"0","kanamycin":"0","amikacin":"0","capreomycin":"0","ethionamide":"0","para-aminosalicylic_acid":"0","clofazimine":"0","linezolid":"0","bedaquiline":"0"}
     ################################################
 
     #### initiate header of drug resist type itol anotation file ####
@@ -126,21 +125,17 @@ def create_itol_lineage_drug_annotation_file(in_dir, out_dir, file_target=".json
     drug_conf_itol.write("COLOR\t#ff0000\n\n")
 
     drug_conf_itol.write("SHOW_VALUES\t0\n")
-    drug_conf_itol.write("FIELD_SHAPES\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\n")
-    drug_conf_itol.write("FIELD_COLORS\t#5E5E5E\t#AC8E68\t#FF453A\t#32D74B\t#0A84FF\t#FF9F0A\t#FFD60A\t#BF5AF2\t#64D2FF\t#3F638B\t#FFFC00\t#007D7D\t#4E8F00\t#011893\t#FF7E79\n")
-    drug_conf_itol.write("FIELD_LABELS\trifampicin\tisoniazid\tethambutol\tpyrazinamide\tstreptomycin\tfluoroquinolones\taminoglycosides\tkanamycin\tamikacin\tcapreomycin\tethionamide\tpara-aminosalicylic_acid\tclofazimine\tlinezolid\tbedaquiline\n\n")
+    drug_conf_itol.write("FIELD_SHAPES\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\n")
+    drug_conf_itol.write("FIELD_COLORS\t#5E5E5E\t#AC8E68\t#FF453A\t#32D74B\t#0A84FF\t#FF9F0A\t#FFD60A\t#BF5AF2\t#64D2FF\t#3F638B\t#6b3e26\t#007D7D\t#4E8F00\t#011893\t#FF7E79\t#38D4D6\t#431479\t#FF7C00\t#FFADD6\n")
+    drug_conf_itol.write("FIELD_LABELS\trifampicin\tisoniazid\tethambutol\tpyrazinamide\tstreptomycin\tfluoroquinolones\taminoglycosides\tkanamycin\tamikacin\tcapreomycin\tethionamide\tpara-aminosalicylic_acid\tclofazimine\tlinezolid\tbedaquiline\tciprofloxacin\tlevofloxacin\tmoxifloxacin\tofloxacin\n\n")
 
     drug_conf_itol.write("LEGEND_TITLE\tDrugs\n")
-    drug_conf_itol.write("LEGEND_SHAPES\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\n")
-    drug_conf_itol.write("LEGEND_COLORS\t#5E5E5E\t#AC8E68\t#FF453A\t#32D74B\t#0A84FF\t#FF9F0A\t#FFD60A\t#BF5AF2\t#64D2FF\t#3F638B\t#FFFC00\t#007D7D\t#4E8F00\t#011893\t#FF7E79\n")
-    drug_conf_itol.write("LEGEND_LABELS\trifampicin\tisoniazid\tethambutol\tpyrazinamide\tstreptomycin\tfluoroquinolones\taminoglycosides\tkanamycin\tamikacin\tcapreomycin\tethionamide\tpara-aminosalicylic_acid\tclofazimine\tlinezolid\tbedaquiline\n\n")
+    drug_conf_itol.write("LEGEND_SHAPES\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\n")
+    drug_conf_itol.write("LEGEND_COLORS\t#5E5E5E\t#AC8E68\t#FF453A\t#32D74B\t#0A84FF\t#FF9F0A\t#FFD60A\t#BF5AF2\t#64D2FF\t#3F638B\t#6b3e26\t#007D7D\t#4E8F00\t#011893\t#FF7E79\t#38D4D6\t#431479\t#FF7C00\t#FFADD6\n")
+    drug_conf_itol.write("LEGEND_LABELS\trifampicin\tisoniazid\tethambutol\tpyrazinamide\tstreptomycin\tfluoroquinolones\taminoglycosides\tkanamycin\tamikacin\tcapreomycin\tethionamide\tpara-aminosalicylic_acid\tclofazimine\tlinezolid\tbedaquiline\tciprofloxacin\tlevofloxacin\tmoxifloxacin\tofloxacin\n\n")
 
     drug_conf_itol.write("DATA\n")
 
-    drug_conf_template_map = {"rifampicin": "0", "isoniazid": "0", "ethambutol": "0", "pyrazinamide": "0",
-                         "streptomycin": "0", "fluoroquinolones": "0", "aminoglycosides": "0", "kanamycin": "0",
-                         "amikacin": "0", "capreomycin": "0", "ethionamide": "0", "para-aminosalicylic_acid": "0",
-                         "clofazimine": "0", "linezolid": "0", "bedaquiline": "0"}
     ################################################
 
     list_file = get_in_file_list(in_dir, file_target)
@@ -175,6 +170,20 @@ def create_itol_lineage_drug_annotation_file(in_dir, out_dir, file_target=".json
             #######################
 
             #### Extract drug Data ####
+
+
+            drug_conf_template_map = {"rifampicin": "0", "isoniazid": "0", "ethambutol": "0", "pyrazinamide": "0",
+                                      "streptomycin": "0", "fluoroquinolones": "0", "aminoglycosides": "0",
+                                      "kanamycin": "0",
+                                      "amikacin": "0", "capreomycin": "0", "ethionamide": "0",
+                                      "para-aminosalicylic_acid": "0",
+                                      "clofazimine": "0", "linezolid": "0", "bedaquiline": "0", "ciprofloxacin": "0", "levofloxacin": "0", "moxifloxacin": "0", "ofloxacin": "0"}
+            drug_template_map = {"rifampicin": "0", "isoniazid": "0", "ethambutol": "0", "pyrazinamide": "0",
+                                 "streptomycin": "0", "fluoroquinolones": "0", "aminoglycosides": "0", "kanamycin": "0",
+                                 "amikacin": "0", "capreomycin": "0", "ethionamide": "0",
+                                 "para-aminosalicylic_acid": "0", "clofazimine": "0", "linezolid": "0",
+                                 "bedaquiline": "0", "ciprofloxacin": "0", "levofloxacin": "0", "moxifloxacin": "0", "ofloxacin": "0"}
+
             master_drug_dict = dict()
             drug_resist_dict = data_dict["small_variant_dr"]
             drug_resist_list = list()
