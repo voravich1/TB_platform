@@ -68,9 +68,15 @@ hgvsp_snpEff_idx = 0
 hgvsc_snpEff_dict = dict()
 hgvsp_snpEff_dict = dict()
 
+annotation_snpEff_idx = 0
+
 drugDB_gene_dict = dict()
 drugDB_hgvs_dict = dict()
 drugDB_drug_dict = dict()
+
+special_drugDB_gene_dict = dict()
+special_drugDB_hgvs_dict = dict()
+special_drugDB_drug_dict = dict()
 
 drug_result_dict = dict()
 
@@ -90,7 +96,8 @@ for snpEff_field in snpEff_field_order:
         hgvsc_snpEff_idx = count
     elif(snpEff_field == 'HGVS.p'):
         hgvsp_snpEff_idx = count
-
+    elif(snpEff_field == 'Annotation'):
+        annotation_snpEff_idx = count
     count+=1
 
 #################################################
@@ -109,30 +116,51 @@ with open(drugDBFile_name) as json_file:
         gene_dict = data[gene]
 
         drugDB_hgvs_dict = dict()
+        special_drugDB_hgvs_dict = dict()
+        specialcase_flag = False
         for variant in gene_dict:
 
-            if variant == '-15C>T':
-                print("")
+            #if variant == '-15C>T':
+                #print("")
 
             variant_dict = gene_dict[variant]
 
             drug_dict = variant_dict['drugs']
             hgvs = variant_dict['hgvs_mutation']
 
-            if hgvs == "p.Ser450Leu": #"p.Lys43Arg" p.Leu452Pro
-                print()
+            #if hgvs == "p.Ser450Leu": #"p.Lys43Arg" p.Leu452Pro
+                #print()
+            ## cheek special case that did not use hgvs format
+            hgvs_split = hgvs.split(".")
+            if(len(hgvs_split) == 1):
+                # hgvs variable is not hgvs format. It's a special case
+                special_drugDB_drug_dict = dict()
+                for drug_name in drug_dict:
+                    drug_name_dict = drug_dict[drug_name]
+                    confidence = drug_name_dict['confidence']
 
-            drugDB_drug_dict = dict()
-            for drug_name in drug_dict:
+                    special_drugDB_drug_dict[drug_name] = confidence
 
-                drug_name_dict = drug_dict[drug_name]
-                confidence = drug_name_dict['confidence']
+                special_drugDB_hgvs_dict[hgvs] = special_drugDB_drug_dict
+                specialcase_flag = True
+            #########################################################
+            ## Normal case
+            else:
+                drugDB_drug_dict = dict()
+                for drug_name in drug_dict:
 
-                drugDB_drug_dict[drug_name] = confidence
+                    drug_name_dict = drug_dict[drug_name]
+                    confidence = drug_name_dict['confidence']
 
-            drugDB_hgvs_dict[hgvs] = drugDB_drug_dict
+                    drugDB_drug_dict[drug_name] = confidence
 
+                drugDB_hgvs_dict[hgvs] = drugDB_drug_dict
+            ##############################################################
         drugDB_gene_dict[gene] = drugDB_hgvs_dict
+
+        if(specialcase_flag == True): ## put special case info to special case dict
+            special_drugDB_gene_dict[gene] = special_drugDB_hgvs_dict
+
 json_file.close()
 ###########################################################
 
@@ -215,12 +243,46 @@ for record in reader_snpeff_vcf:
 
         snpEff_geneID = snpEff_field_list[snpEff_field_query_index['Gene_ID']]
         snpEff_geneName = snpEff_field_list[snpEff_field_query_index['Gene_Name']]
+        annotation_snpEff = snpEff_field_list[annotation_snpEff_idx]
+
+        ## Because we know how special case look like. So,reformat infomation to map with special case (hard code)
+        ## there is 3 special case right now I just hard code on 2 case. the The third case wich is large_deletion sitll not be handle yet.
+        special_case_check = "no_special_case"
+        if(annotation_snpEff == "missense_variant"):
+            dummy_hgvsc = snpEff_field_list[hgvsc_snpEff_idx]
+            if dummy_hgvsc != "":
+                dummy_ref = record.REF
+                split_word = dummy_ref + ">"
+                dummy_hgvsc_split = dummy_hgvsc.split(split_word)[0]
+                if len(dummy_hgvsc.split(split_word)) == 1: ## in case that hgvs is use complement base of reference
+                    if dummy_ref == "A":
+                        dummy_ref = "T"
+                    elif dummy_ref == "T":
+                        dummy_ref = "A"
+                    elif dummy_ref == "C":
+                        dummy_ref = "G"
+                    elif dummy_ref == "G":
+                        dummy_ref = "C"
+                    split_word = dummy_ref + ">"
+                    dummy_hgvsc_split = dummy_hgvsc.split(split_word)[0]
+                    if dummy_hgvsc.split(split_word) == 1:
+                        print("")
+
+                dummy_nucleotide_number = dummy_hgvsc_split.split(".")[1]
+                special_case_check = "any_missense_codon_" + dummy_nucleotide_number
+            else:
+                special_case_check = "any_missense"
+        elif(annotation_snpEff == "frameshift_variant"):
+            special_case_check = "frameshift"
+        ##
 
         hgvsc_info = snpEff_field_list[hgvsc_snpEff_idx]
         hgvsp_info = snpEff_field_list[hgvsp_snpEff_idx]
 
         if hgvsp_info != "":
             hgvsc_ready = hgvsc_info
+            if snpEff_geneName == "rrs" or snpEff_geneName == "rrl": ## force change hgvs format of n. to r. To make it mapab;e to db of this 2 gene
+                hgvsc_ready = str.replace("n","r",1)
         else:
             hgvsc_ready = hgvsc_info
 
@@ -241,6 +303,38 @@ for record in reader_snpeff_vcf:
         #########################################
         #### Check with database
         #########################################
+        ## Special case check not hgvs as key (need special hasrd code)
+        if snpEff_geneID in special_drugDB_gene_dict:
+            gene_hit_dict = special_drugDB_gene_dict[snpEff_geneID]
+
+            record_hit_dict = dict()
+            if special_case_check in gene_hit_dict:
+                record_hit_dict['Drug'] = gene_hit_dict[special_case_check]
+                record_hit_dict['Ref'] = record.REF
+                record_hit_dict['Pos'] = record.POS
+
+                for i in range(len(snpEff_field_order)):
+                    record_hit_dict[snpEff_field_order[i]] = snpEff_field_list[i]
+
+                drug_result_dict[record_hit_ID] = record_hit_dict
+                record_hit_ID += 1
+
+        elif snpEff_geneName in special_drugDB_gene_dict:
+            gene_hit_dict = special_drugDB_gene_dict[snpEff_geneName]
+
+            record_hit_dict = dict()
+            if special_case_check in gene_hit_dict:
+                record_hit_dict['Drug'] = gene_hit_dict[special_case_check]
+                record_hit_dict['Ref'] = record.REF
+                record_hit_dict['Pos'] = record.POS
+
+                for i in range(len(snpEff_field_order)):
+                    record_hit_dict[snpEff_field_order[i]] = snpEff_field_list[i]
+
+                drug_result_dict[record_hit_ID] = record_hit_dict
+                record_hit_ID += 1
+
+        ## Normal case check hgvs as key
         if snpEff_geneID in drugDB_gene_dict:
             gene_hit_dict = drugDB_gene_dict[snpEff_geneID]
 
