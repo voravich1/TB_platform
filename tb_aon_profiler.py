@@ -23,7 +23,7 @@ __status__ = "Development"
 
 this_file_dir = os.path.dirname(os.path.realpath(__file__))
 drugDB = os.path.join(this_file_dir,"db","tbprofiler_drugDB.json")
-linDB = os.path.join(this_file_dir,"db","lin_db_6915.txt")
+linDB = os.path.join(this_file_dir,"db","lin_tb_.csv")
 
 #vcfFile_snpeff_name = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/test/98_typing_snp_snpeff.vcf"      # vcf must be snnotate with snpEff
 
@@ -42,7 +42,7 @@ parser.add_argument('-i', '--input', help='Input VCF file name (can be vcf.gz)',
 parser.add_argument('-o', '--output', help='Absolute path of Output folder', required=True)
 parser.add_argument('-d', '--drdb', help='adsolute path to drug database file (in .json format like tbprofiler used)', nargs='?', const=1, default=drugDB, required=False)
 parser.add_argument('-l', '--lindb', help='adsolute path to lineage database file (in tab dilimit format [pos\tref\talt\tlineage])', nargs='?', const=1, default=linDB, required=False)
-parser.add_argument('-e', '--threshold', help='lineage decision threshold value 0 to 1 default 0.9 which refer to 90%', const=1, nargs='?', type=int, default=0.9, required=False)
+parser.add_argument('-e', '--threshold', help='lineage decision threshold value 0 to 1 default 0.9 which refer to 90%', const=1, nargs='?', type=float, default=0.9, required=False)
 
 args = parser.parse_args()
 
@@ -249,27 +249,28 @@ for record in reader_snpeff_vcf:
         ## there is 3 special case right now I just hard code on 2 case. the The third case wich is large_deletion sitll not be handle yet.
         special_case_check = "no_special_case"
         if(annotation_snpEff == "missense_variant"):
-            dummy_hgvsc = snpEff_field_list[hgvsc_snpEff_idx]
-            if dummy_hgvsc != "":
-                dummy_ref = record.REF
-                split_word = dummy_ref + ">"
-                dummy_hgvsc_split = dummy_hgvsc.split(split_word)[0]
-                if len(dummy_hgvsc.split(split_word)) == 1: ## in case that hgvs is use complement base of reference
-                    if dummy_ref == "A":
-                        dummy_ref = "T"
-                    elif dummy_ref == "T":
-                        dummy_ref = "A"
-                    elif dummy_ref == "C":
-                        dummy_ref = "G"
-                    elif dummy_ref == "G":
-                        dummy_ref = "C"
-                    split_word = dummy_ref + ">"
-                    dummy_hgvsc_split = dummy_hgvsc.split(split_word)[0]
-                    if dummy_hgvsc.split(split_word) == 1:
-                        print("")
+            dummy_hgvsp = snpEff_field_list[hgvsp_snpEff_idx]
+            codon_number = snpEff_field_list[13].split("/")[0]
+            if dummy_hgvsp != "":
+             #   dummy_ref = record.REF
+              #  split_word = dummy_ref + ">"
+               # dummy_hgvsp_split = dummy_hgvsp.split(split_word)[0]
+                #if len(dummy_hgvsp.split(split_word)) == 1: ## in case that hgvs is use complement base of reference
+                 #   if dummy_ref == "A":
+                  #      dummy_ref = "T"
+                   # elif dummy_ref == "T":
+                    #    dummy_ref = "A"
+                    #elif dummy_ref == "C":
+                    #    dummy_ref = "G"
+                    #elif dummy_ref == "G":
+                    #    dummy_ref = "C"
+                    #split_word = dummy_ref + ">"
+                    #dummy_hgvsp_split = dummy_hgvsp.split(split_word)[0]
+                    #if dummy_hgvsp.split(split_word) == 1:
+                        #print("")
 
-                dummy_nucleotide_number = dummy_hgvsc_split.split(".")[1]
-                special_case_check = "any_missense_codon_" + dummy_nucleotide_number
+                #dummy_nucleotide_number = dummy_hgvsp_split.split(".")[1]
+                special_case_check = "any_missense_codon_" + codon_number
             else:
                 special_case_check = "any_missense"
         elif(annotation_snpEff == "frameshift_variant"):
@@ -294,6 +295,9 @@ for record in reader_snpeff_vcf:
         if hgvsp_ready == "p.Ser450Leu": #"p.Lys43Arg" "p.Leu452Pro"
             print("")
 
+        if hgvsp_ready == "p.Asp94Ala": #"p.Lys43Arg" "p.Leu452Pro"
+            print("")
+
         if hgvsc_ready == 'c.-15C>T':
             print(snpEff_geneID)
 
@@ -303,7 +307,7 @@ for record in reader_snpeff_vcf:
         #########################################
         #### Check with database
         #########################################
-        ## Special case check not hgvs as key (need special hasrd code)
+        ## Special case check not hgvs as key (need special hard code)
         if snpEff_geneID in special_drugDB_gene_dict:
             gene_hit_dict = special_drugDB_gene_dict[snpEff_geneID]
 
