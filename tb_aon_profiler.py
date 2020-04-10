@@ -279,14 +279,23 @@ for record in reader_snpeff_vcf:
 
         hgvsc_info = snpEff_field_list[hgvsc_snpEff_idx]
         hgvsp_info = snpEff_field_list[hgvsp_snpEff_idx]
-
-        if hgvsp_info != "":
+        ### Reformat hgvsc into the same format used in Database
+        if hgvsp_info == "":    ## case check for rrs and rrl gene
             hgvsc_ready = hgvsc_info
             if snpEff_geneName == "rrs" or snpEff_geneName == "rrl": ## force change hgvs format of n. to r. To make it mapab;e to db of this 2 gene
-                hgvsc_ready = str.replace("n","r",1)
+                hgvsc_ready = hgvsc_info.replace("n","r",1).lower() ## Force transform lower case because base in data base is lower case
+        elif len(hgvsc_info.split("del")) > 1: ## case check for small deletion events
+            dummy_hgvsc_split=hgvsc_info.split("del")
+            if dummy_hgvsc_split[1] != "":
+                dummy_unuse_part=dummy_hgvsc_split[1]
+                hgvsc_ready=hgvsc_info.split(dummy_unuse_part)[0]
+            else:
+                hgvsc_ready=hgvsc_info
+
         else:
             hgvsc_ready = hgvsc_info
 
+        #########################################################
         if hgvsp_info != "":
             hgvsp_ready = hgvsp_info
         else:
@@ -298,6 +307,9 @@ for record in reader_snpeff_vcf:
         if hgvsp_ready == "p.Asp94Ala": #"p.Lys43Arg" "p.Leu452Pro"
             print("")
 
+        if hgvsc_ready == 'c.1290delC':
+            print(snpEff_geneID)
+
         if hgvsc_ready == 'c.-15C>T':
             print(snpEff_geneID)
 
@@ -308,11 +320,12 @@ for record in reader_snpeff_vcf:
         #### Check with database
         #########################################
         ## Special case check not hgvs as key (need special hard code)
+        ## Check only for "any_missense_codon_" special case
         if snpEff_geneID in special_drugDB_gene_dict:
             gene_hit_dict = special_drugDB_gene_dict[snpEff_geneID]
 
             record_hit_dict = dict()
-            if special_case_check in gene_hit_dict:
+            if special_case_check in gene_hit_dict and special_case_check != "frameshift": ## "frameshift" will not check here but will be check after normal case not hit
                 record_hit_dict['Drug'] = gene_hit_dict[special_case_check]
                 record_hit_dict['Ref'] = record.REF
                 record_hit_dict['Pos'] = record.POS
@@ -327,7 +340,7 @@ for record in reader_snpeff_vcf:
             gene_hit_dict = special_drugDB_gene_dict[snpEff_geneName]
 
             record_hit_dict = dict()
-            if special_case_check in gene_hit_dict:
+            if special_case_check in gene_hit_dict and special_case_check != "frameshift": ## "frameshift" will not check here but will be check after normal case not hit
                 record_hit_dict['Drug'] = gene_hit_dict[special_case_check]
                 record_hit_dict['Ref'] = record.REF
                 record_hit_dict['Pos'] = record.POS
@@ -337,7 +350,7 @@ for record in reader_snpeff_vcf:
 
                 drug_result_dict[record_hit_ID] = record_hit_dict
                 record_hit_ID += 1
-
+        ################################################################################
         ## Normal case check hgvs as key
         if snpEff_geneID in drugDB_gene_dict:
             gene_hit_dict = drugDB_gene_dict[snpEff_geneID]
@@ -366,6 +379,23 @@ for record in reader_snpeff_vcf:
 
                 drug_result_dict[record_hit_ID] = record_hit_dict
                 record_hit_ID += 1
+            else:
+                ## Normal case not hit. So, check for "frameshift" special case
+                if snpEff_geneID in special_drugDB_gene_dict:
+                    gene_hit_dict = special_drugDB_gene_dict[snpEff_geneID]
+
+                    record_hit_dict = dict()
+                    if special_case_check in gene_hit_dict and special_case_check == "frameshift":  ## "frameshift" will not check here but will be check after normal case not hit
+                        record_hit_dict['Drug'] = gene_hit_dict[special_case_check]
+                        record_hit_dict['Ref'] = record.REF
+                        record_hit_dict['Pos'] = record.POS
+
+                        for i in range(len(snpEff_field_order)):
+                            record_hit_dict[snpEff_field_order[i]] = snpEff_field_list[i]
+
+                        drug_result_dict[record_hit_ID] = record_hit_dict
+                        record_hit_ID += 1
+                #######################################################
         elif snpEff_geneName in drugDB_gene_dict:
             gene_hit_dict = drugDB_gene_dict[snpEff_geneName]
 
@@ -393,6 +423,23 @@ for record in reader_snpeff_vcf:
 
                 drug_result_dict[record_hit_ID] = record_hit_dict
                 record_hit_ID += 1
+            else:
+                ## Normal case not hit. So, check for "frameshift" special case
+                if snpEff_geneName in special_drugDB_gene_dict:
+                    gene_hit_dict = special_drugDB_gene_dict[snpEff_geneName]
+
+                    record_hit_dict = dict()
+                    if special_case_check in gene_hit_dict and special_case_check == "frameshift":  ## "frameshift" will not check here but will be check after normal case not hit
+                        record_hit_dict['Drug'] = gene_hit_dict[special_case_check]
+                        record_hit_dict['Ref'] = record.REF
+                        record_hit_dict['Pos'] = record.POS
+
+                        for i in range(len(snpEff_field_order)):
+                            record_hit_dict[snpEff_field_order[i]] = snpEff_field_list[i]
+
+                        drug_result_dict[record_hit_ID] = record_hit_dict
+                        record_hit_ID += 1
+                #########################################################
         #################################################################
 
         if hgvsc_ready in hgvsc_snpEff_dict:
