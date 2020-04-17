@@ -10,6 +10,7 @@ import vcfpy
 from collections import OrderedDict
 import argparse
 import os
+import ntpath
 from pathlib import Path
 
 __author__ = "Worawich Phornsiricharoenphant"
@@ -193,16 +194,17 @@ def adjust_to_overlap_pos(in_start: int,in_end: int,event_size, percent_overlap)
 # Inner method for mapping sv event to database (overlap logic)
 import bisect
 
-def binary_search_sv_mapping(in_vcf_record,in_del_db_dict_bisect):
+def binary_search_sv_mapping(in_vcf_record,in_del_db_dict_bisect, percent_overlap):
     # extract data from vcf record
     id = in_vcf_record.ID
     chr = "1" #in_vcf_record.CHROM
     info = in_vcf_record.INFO
+    sv_type = info["SVTYPE"]
     result = dict()
     if "IMPRECISE" in info:  # cut event that has IMPRECISE flag
         return None
-
-    sv_type = info["SVTYPE"]
+    elif sv_type != "DEL":
+        return None
 
     start = int(in_vcf_record.POS)  # 1 based coordinate the diff of 1 based and 0 based is for start 1 based is inclusive the number you saw but 0 based is not.
     end = int(info["END"])  # 1 based coordinate he diff of 1 based and 0 based is for For stop position both are inclusive
@@ -227,27 +229,51 @@ def binary_search_sv_mapping(in_vcf_record,in_del_db_dict_bisect):
         # and any index on the left has value lower than query number
 
         # check end position. get all index that are higher than or equal to query number
-        index_end = bisect.bisect_left(list_sorted_adjust_overlap_end, end)
-        dummy_end_info_pass_list = list_info_end[index_end:]
+        ##index_end = bisect.bisect_left(list_sorted_adjust_overlap_end, end)
+        ##dummy_end_info_pass_list = list_info_end[index_end:]
 
         # check start position. get all index that are lower or equal to query number
         # special treat on index on the left. we check equality of number index with query number
         # If it equal we will count it in. So, we plus 1 to index beacuase when we query from list with rage index it will no inclusive for back index. eg. num[:2] you will get value on 0 and 1 index not 0,1 and 2
-        index_start = bisect.bisect_left(list_sorted_adjust_overlap_start, start)
-        dummy_start_info_pass_list = list()
-        if index_start == 12:
-            print(index_start)
+        ##index_start = bisect.bisect_left(list_sorted_adjust_overlap_start, start)
+        ##dummy_start_info_pass_list = list()
+        ##if index_start == 12:
+            ##print(index_start)
 
-        if index_start >= len(list_sorted_adjust_overlap_start): # in case that query start has value higher than last member bisect will return index that exceed the actual size of list which give error
-                dummy_start_info_pass_list = list_info_start
+        #if index_start >= len(list_sorted_adjust_overlap_start): # in case that query start has value higher than last member bisect will return index that exceed the actual size of list which give error
+                #dummy_start_info_pass_list = list_info_start
+       #else:
+            #if list_sorted_adjust_overlap_start[index_start] == start:
+                #if len(list_info_start) != index_start:
+                    #dummy_start_info_pass_list = list_info_start[:index_start+1]
+                #else:
+                    #dummy_start_info_pass_list = list_info_start
+            #else:
+                #dummy_start_info_pass_list = list_info_start[:index_start]
+
+        # check end position. get all index that are higher than or equal to query number
+        index_start = bisect.bisect_left(list_sorted_adjust_overlap_start, start)
+        dummy_start_info_pass_list = list_info_start[index_start:]
+
+        # check start position. get all index that are lower or equal to query number
+        # special treat on index on the left. we check equality of number index with query number
+        # If it equal we will count it in. So, we plus 1 to index beacuase when we query from list with rage index it will no inclusive for back index. eg. num[:2] you will get value on 0 and 1 index not 0,1 and 2
+        index_end = bisect.bisect_left(list_sorted_adjust_overlap_end, end)
+        dummy_end_info_pass_list = list()
+        #if start == 4092079:
+            #print(index_end)
+
+        if index_end >= len(list_sorted_adjust_overlap_end):  # in case that query start has value higher than last member bisect will return index that exceed the actual size of list which give error
+            dummy_end_info_pass_list = list_info_end
         else:
-            if list_sorted_adjust_overlap_start[index_start] == start:
-                if len(list_info_start) != index_start:
-                    dummy_start_info_pass_list = list_info_start[:index_start+1]
+            if list_sorted_adjust_overlap_end[index_end] == end:
+                if len(list_info_end) != index_end:
+                    dummy_end_info_pass_list = list_info_end[:index_end + 1]
                 else:
-                    dummy_start_info_pass_list = list_info_start
+                    dummy_end_info_pass_list = list_info_end
             else:
-                dummy_start_info_pass_list = list_info_start[:index_start]
+                dummy_end_info_pass_list = list_info_end[:index_end]
+
         ###############################
         # loop check RD match pairing
         pairing_dict = dict()
@@ -256,8 +282,6 @@ def binary_search_sv_mapping(in_vcf_record,in_del_db_dict_bisect):
         for info in dummy_start_info_pass_list:
             rd_id = info[0]
             lineage = info[1]
-            start = info[2]
-            end = info[3]
             sv_len = info[4]
 
             pairing_dict[rd_id] = info
@@ -268,8 +292,14 @@ def binary_search_sv_mapping(in_vcf_record,in_del_db_dict_bisect):
             rd_id = info[0]
 
             if rd_id in pairing_dict:
-                result_count+=1
-                result[result_count] = info
+                start2 = info[2]
+                end2 = info[3]
+                ## Final check. Reciprocal overlap
+                check_flag = check_reciprocal_overlap(start,end,start2,end2,percent_overlap)
+
+                if check_flag == True:
+                    #result_count+=1
+                    result[info[0]] = info
         if not result:
             return None
         else:
@@ -279,28 +309,168 @@ def binary_search_sv_mapping(in_vcf_record,in_del_db_dict_bisect):
     ####################################
 ########################################################################################################################
 
+########################################################################################################################
+## Check reciprocal overlap function
+def check_reciprocal_overlap(startA, endA, startB, endB, percent_overlap):
 
+
+    #event1 = list(range(startA, (endA + 1)))
+    #event2 = list(range(startB, (endB + 1)))
+
+    #region_intersect = intersection(event1,event2)
+    #num_intersect = len(region_intersect)
+
+    #event1_percent_overlap = (num_intersect * 100) / len(event1)
+    #event2_percent_overlap = (num_intersect * 100) / len(event2)
+
+    ##############################################################
+    ## Numeric calculate overlap
+
+    len_A = (endA - startA) + 1
+    len_B = (endB - startB) + 1
+    if startA >= startB and endA > endB:
+        x = startA - startB
+        num_overlap = len_B - x
+    elif startA < startB and endA <= endB:
+        x = startB - startA
+        num_overlap = len_A - x
+    elif startA >= startB and endA <= endB:
+        x = startA - startB
+        y = endB - endA
+        u = len_B - x
+        num_overlap = u - y
+    elif startA < startB and endA > endB:
+        x = startB - startA
+        y = endA - endB
+        u = len_A - x
+        num_overlap = u - y
+    elif startA == startB and endA == endB:
+        num_overlap = len_A
+
+    event1_percent_overlap_num = (num_overlap*100)/len_A
+    event2_percent_overlap_num = (num_overlap*100)/len_B
+    #########################################################
+
+    #if num_overlap != num_intersect:
+        #print("Noooooo!!!!\n")
+        #print("starA:" + startA + "\n")
+        #print("endA:" + endA + "\n")
+        #print("starB:" + startB + "\n")
+        #print("endB:" + endB + "\n")
+
+
+    if event1_percent_overlap_num >= percent_overlap and event2_percent_overlap_num >= percent_overlap:
+        return True
+    else:
+        return False
+########################################################################################################################
+
+########################################################################################################################
+## Intersect two list
+def intersection(lst1, lst2):
+    lst3 = [value for value in lst1 if value in lst2]
+    return lst3
+########################################################################################################################
+
+########################################################################################################################
+## Phase one lineage classify decission tree (Hard code)
+def phase_one_lineage_judgement(result_dict):
+    lineage_result = dict()
+    if "RD149" in result_dict:
+        if "RD750" in result_dict:
+            info1 = result_dict["RC149"]
+            info2 = result_dict["RD750"]
+            info = [info1,info2]
+            lineage_result["lineage3"] = info
+        elif "RD105_EX" in result_dict:
+            info1 = result_dict["RC149"]
+            info2 = result_dict["RD105_EX"]
+            info = [info1, info2]
+            lineage_result["lineage2-proto"] = info
+        elif "RD105" in result_dict:
+            info1 = result_dict["RC149"]
+            info2 = result_dict["RD105"]
+            info = [info1, info2]
+            lineage_result["lineage2"] = info
+        else:
+            info = result_dict["RD149"]
+            lineage_result["lineage4"] = info
+    else:
+        if "RD239" in result_dict:
+            info = result_dict["RD239"]
+            lineage_result["lineage1"] = info
+            if "RV0209" in result_dict and "RV1004" in result_dict and "RV2531" in result_dict:
+                info1 = result_dict["RV0209"]
+                info2 = result_dict["RV01004"]
+                info3 = result_dict["RV2531"]
+                info = [info1,info2,info3]
+                lineage_result["lineage 1.2.1"] = info
+                if "RD121" in result_dict:
+                    info = result_dict["RD121"]
+                    lineage_result["lineage1.2.1.1"] = info
+                elif "RV968" in result_dict:
+                    info = result_dict["RV968"]
+                    lineage_result["lineage 1.2.1.2"] = info
+        elif "RD711" in result_dict:
+            info = result_dict["RD711"]
+            lineage_result["lineage5"] = info
+        elif "RD702" in result_dict:
+            info = result_dict["RD702"]
+            lineage_result["lineage6"] = info
+        else:
+            lineage_result["unclassify_lineage"] = False
+
+    return lineage_result
+########################################################################################################################
 
 vcfFile_name = args.input
 delDBFile_name = args.lineage_del_db
 
 reader_sv_vcf = vcfpy.Reader.from_path(vcfFile_name)
 
-samplename = reader_sv_vcf.header.samples.names[0] ## this will return list of sample name in a header row of vcf
+vcfFile_basename = ntpath.basename(vcfFile_name)
+samplename = vcfFile_basename.split("_")[0]
+#samplename = reader_sv_vcf.header.samples.names[0] ## this will return list of sample name in a header row of vcf
 
 output_json_file_name = samplename + "_result_test.json"
 json_result_file = os.path.join(args.output, output_json_file_name)
 
 header_vcf = reader_sv_vcf.header
+percent_overlap = 70
 
 #del_db_dict = import_del_db(delDBFile_name)
-del_db_bisect_dict = import_del_db_bisect(delDBFile_name)
+del_db_bisect_dict = import_del_db_bisect(delDBFile_name,percent_overlap)
 
+result_dict = dict()
+result_dict_json = dict()
+#result_count = 0
 for record in reader_sv_vcf :
     #dummy_res_dict = sv_database_mapping(record,del_db_dict)
-    dummy_res_dict = binary_search_sv_mapping(record, del_db_bisect_dict)
-    print()
-    ## continue code for finalize lineage need to wait for all record to be process
+    dummy_res_dict = binary_search_sv_mapping(record, del_db_bisect_dict, percent_overlap)
+
+    if dummy_res_dict != None:
+        #result_dict +=1
+        #result_dict[result_dict] = dummy_res_dict
+        result_dict.update(dummy_res_dict)
+
+lineage_final_result_dict = phase_one_lineage_judgement(result_dict)
+lineage_final_result_sorted_dict = OrderedDict(sorted(lineage_final_result_dict.items()))
+
+result_dict_json["sample_name"] = samplename
+result_dict_json["lineage"] = lineage_final_result_sorted_dict
+
+js = json.dumps(result_dict_json, sort_keys=True, indent=4)
+
+
+json_write = open(json_result_file,'w')
+
+json_write.write(js)
+
+json_write.close()
+print("Done read vcf")
+
+    ## Test with single sample for RD239 pass but still has problem with false call lineage 4 that cause false call lineage1 insample ERR718222
+
 
 
 
