@@ -114,7 +114,7 @@ def create_itol_lineage_drug_annotation_file(in_dir, out_dir, file_target=".json
 
     drug_typ_itol.write("DATA\n")
 
-    drug_typ_color_map = {"sensitive":"#80FF00","resistant":"#7fe5f0","MDR":"#8000FF","XDR":"#FF0000"}
+    drug_typ_color_map = {"sensitive":"#80FF00","resistant":"#7fe5f0","MDR":"#8000FF","XDR":"#FF0000","none":"#000000"}
     ################################################
 
     #### initiate header of drug resist confident itol anotation file ####
@@ -232,8 +232,89 @@ def create_itol_lineage_drug_annotation_file(in_dir, out_dir, file_target=".json
     drug_conf_itol.close()
     drug_typ_itol.close()
     lineage_itol.close()
+########################################################################################################################
+def collate_result(inputs, out_dir, file_target=args.target):
 
+    collate_file_path = os.path.join(out_dir, "summary_result.txt")
+    collate_file = open(collate_file_path, 'w')
+
+    # Initialize header
+    collate_file.write("Sample\tLineage\tDrug Resistant Type\trifampicin\tisoniazid\tethambutol\tpyrazinamide\tstreptomycin\tfluoroquinolones\taminoglycosides\tkanamycin\tamikacin\tcapreomycin\tethionamide\tpara-aminosalicylic_acid\tclofazimine\tlinezolid\tbedaquiline\tciprofloxacin\tlevofloxacin\tmoxifloxacin\tofloxacin\n")
+
+
+    list_file = get_in_file_list(inputs, file_target)
+    for file in list_file:
+        with open(file) as fp:
+
+            data_dict = json.load(fp)
+
+            sample_name = data_dict["sample_name"]
+
+            # extract lineage data
+            lineage_dict = data_dict["lineage"]
+            lineage_list = []
+            for lineage in lineage_dict:
+                lineage_list.append(lineage)
+            lineage_export_string = "|".join(lineage_list)
+
+            # extract drug resistant
+            drug_template_map = {"rifampicin": "0", "isoniazid": "0", "ethambutol": "0", "pyrazinamide": "0",
+                                 "streptomycin": "0", "fluoroquinolones": "0", "aminoglycosides": "0", "kanamycin": "0",
+                                 "amikacin": "0", "capreomycin": "0", "ethionamide": "0",
+                                 "para-aminosalicylic_acid": "0", "clofazimine": "0", "linezolid": "0",
+                                 "bedaquiline": "0", "ciprofloxacin": "0", "levofloxacin": "0", "moxifloxacin": "0",
+                                 "ofloxacin": "0"}
+
+            drug_resist_dict = data_dict["small_variant_dr"]
+            for key in drug_resist_dict:
+                info_variant_dict = drug_resist_dict[key]
+                drug_info_dict = info_variant_dict["Drug"]
+
+                for drug in drug_info_dict:
+
+                    if drug in drug_template_map:
+                        confidence = drug_info_dict[drug]
+                        if confidence == "high":
+                            score = 4
+                        elif confidence == "moderate":
+                            score = 3
+                        elif confidence == "low":
+                            score = 2
+                        elif confidence == "indeterminate":
+                            score = 1
+                        else:
+                            score = 0
+
+                        # check existing score value if it lower tand current change to current score
+                        if drug_template_map[drug] <= score:
+                            drug_template_map[drug] = score
+            drug_resist_list = []
+            for drug in drug_template_map:
+                score = drug_template_map[drug]
+                if score == 4:
+                    drug_resist_list.append("high")
+                elif score == 3:
+                    drug_resist_list.append("moderate")
+                elif score == 2:
+                    drug_resist_list.append("low")
+                elif score == 1:
+                    drug_resist_list.append("indeterminate")
+                else:
+                    drug_resist_list.append("none")
+
+            drug_resist_export_string = "\t".join(drug_resist_list)
+
+            # extract drug resistant type
+            drug_resist_type = data_dict["drug_resist_type"]
+            if drug_resist_type == "":
+                drug_resist_type = "none"
+
+
+            collate_file.write(sample_name + "\t" + lineage_export_string + "\t" + drug_resist_type + "\t" + drug_resist_export_string + "\n")
+
+    collate_file.close()
 # --------main---------
 
 #f_list = get_in_file_list(args.input, args.target)
 create_itol_lineage_drug_annotation_file(args.input, args.output, file_target=args.target)
+collate_result(args.input, args.output, file_target=args.target)

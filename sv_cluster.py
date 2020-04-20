@@ -12,6 +12,7 @@ class svcluster:
 
 
     def add_svevent(self,filename,record):
+        return None
 
 class svevent:
 

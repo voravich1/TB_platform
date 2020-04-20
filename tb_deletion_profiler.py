@@ -262,11 +262,11 @@ def binary_search_sv_mapping(in_vcf_record,in_del_db_dict_bisect, percent_overla
         dummy_end_info_pass_list = list()
         #if start == 4092079:
             #print(index_end)
-
         if index_end >= len(list_sorted_adjust_overlap_end):  # in case that query start has value higher than last member bisect will return index that exceed the actual size of list which give error
             dummy_end_info_pass_list = list_info_end
         else:
-            if list_sorted_adjust_overlap_end[index_end] == end:
+            original_end = list_info_end[index_end][3]
+            if original_end == end:
                 if len(list_info_end) != index_end:
                     dummy_end_info_pass_list = list_info_end[:index_end + 1]
                 else:
@@ -376,19 +376,20 @@ def intersection(lst1, lst2):
 ## Phase one lineage classify decission tree (Hard code)
 def phase_one_lineage_judgement(result_dict):
     lineage_result = dict()
+    candidate_result = result_dict
     if "RD149" in result_dict:
         if "RD750" in result_dict:
-            info1 = result_dict["RC149"]
+            info1 = result_dict["RD149"]
             info2 = result_dict["RD750"]
             info = [info1,info2]
             lineage_result["lineage3"] = info
         elif "RD105_EX" in result_dict:
-            info1 = result_dict["RC149"]
+            info1 = result_dict["RD149"]
             info2 = result_dict["RD105_EX"]
             info = [info1, info2]
             lineage_result["lineage2-proto"] = info
         elif "RD105" in result_dict:
-            info1 = result_dict["RC149"]
+            info1 = result_dict["RD149"]
             info2 = result_dict["RD105"]
             info = [info1, info2]
             lineage_result["lineage2"] = info
@@ -401,16 +402,16 @@ def phase_one_lineage_judgement(result_dict):
             lineage_result["lineage1"] = info
             if "RV0209" in result_dict and "RV1004" in result_dict and "RV2531" in result_dict:
                 info1 = result_dict["RV0209"]
-                info2 = result_dict["RV01004"]
+                info2 = result_dict["RV1004"]
                 info3 = result_dict["RV2531"]
                 info = [info1,info2,info3]
-                lineage_result["lineage 1.2.1"] = info
+                lineage_result["lineage1.2.1"] = info
                 if "RD121" in result_dict:
                     info = result_dict["RD121"]
                     lineage_result["lineage1.2.1.1"] = info
                 elif "RV968" in result_dict:
                     info = result_dict["RV968"]
-                    lineage_result["lineage 1.2.1.2"] = info
+                    lineage_result["lineage1.2.1.2"] = info
         elif "RD711" in result_dict:
             info = result_dict["RD711"]
             lineage_result["lineage5"] = info
@@ -420,7 +421,7 @@ def phase_one_lineage_judgement(result_dict):
         else:
             lineage_result["unclassify_lineage"] = False
 
-    return lineage_result
+    return [lineage_result,candidate_result]
 ########################################################################################################################
 
 vcfFile_name = args.input
@@ -453,11 +454,14 @@ for record in reader_sv_vcf :
         #result_dict[result_dict] = dummy_res_dict
         result_dict.update(dummy_res_dict)
 
-lineage_final_result_dict = phase_one_lineage_judgement(result_dict)
+lineage_final_result_dict, candidate_result_dict = phase_one_lineage_judgement(result_dict)
 lineage_final_result_sorted_dict = OrderedDict(sorted(lineage_final_result_dict.items()))
 
 result_dict_json["sample_name"] = samplename
 result_dict_json["lineage"] = lineage_final_result_sorted_dict
+result_dict_json["candidate_results"] = candidate_result_dict
+result_dict_json["small_variant_dr"] = {}
+result_dict_json["drug_resist_type"] = "none"
 
 js = json.dumps(result_dict_json, sort_keys=True, indent=4)
 
@@ -469,7 +473,7 @@ json_write.write(js)
 json_write.close()
 print("Done read vcf")
 
-    ## Test with single sample for RD239 pass but still has problem with false call lineage 4 that cause false call lineage1 insample ERR718222
+    ## Test with single sample for RD239 pass but still has problem with false call lineage 4 that cause false call lineage1 in sample ERR718222
 
 
 
