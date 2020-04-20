@@ -29,6 +29,7 @@ parser = argparse.ArgumentParser(description='ADD YOUR DESCRIPTION HERE')
 parser.add_argument('-i', '--input', help='Input VCF file name (can be vcf.gz)', required=True)
 parser.add_argument('-o', '--output', help='Absolute path of Output folder', required=True)
 parser.add_argument('-d', '--lineage_del_db', help='adsolute path to lineage deletion marker database file (in tab delimit format)', nargs='?', const=1, default=del_db, required=False)
+parser.add_argument('--genotype_mode', action='store_true', help="Activate genotype mode.")
 
 args = parser.parse_args()
 
@@ -194,18 +195,37 @@ def adjust_to_overlap_pos(in_start: int,in_end: int,event_size, percent_overlap)
 # Inner method for mapping sv event to database (overlap logic)
 import bisect
 
-def binary_search_sv_mapping(in_vcf_record,in_del_db_dict_bisect, percent_overlap):
+def binary_search_sv_mapping(in_vcf_record,in_del_db_dict_bisect, percent_overlap, genotype_mode):
     # extract data from vcf record
     id = in_vcf_record.ID
     chr = "1" #in_vcf_record.CHROM
     info = in_vcf_record.INFO
+    format = in_vcf_record.FORMAT
+    format_list = in_vcf_record.calls[0]
+    gt = format_list.gt_alleles
+    genotype = ""
+    # check genotype homo only if genotype mode is True
+    if gt[0] == 0 and gt[1] == 0:
+        genotype = "0/0"
+    elif gt[0] == 0 and gt[1] == 1:
+        genotype = "0/1"
+    elif gt[0] == 1 and gt[1] == 1:
+        genotype = "1/1"
+    else:
+        return None
+
+    if genotype_mode == True:
+        if genotype == "0/0" or genotype == "0/1":
+            return None
+
+    # check SV type Deletion only
     sv_type = info["SVTYPE"]
     result = dict()
     if "IMPRECISE" in info:  # cut event that has IMPRECISE flag
         return None
     elif sv_type != "DEL":
         return None
-
+    # if event has no svlen it mean it not deletion. I thinl the above case was already get rid of noisy thing already but put this case check just for safe
     start = int(in_vcf_record.POS)  # 1 based coordinate the diff of 1 based and 0 based is for start 1 based is inclusive the number you saw but 0 based is not.
     end = int(info["END"])  # 1 based coordinate he diff of 1 based and 0 based is for For stop position both are inclusive
     if "SVLEN" in info:
@@ -426,6 +446,7 @@ def phase_one_lineage_judgement(result_dict):
 
 vcfFile_name = args.input
 delDBFile_name = args.lineage_del_db
+genotype_mode = args.genotype_mode
 
 reader_sv_vcf = vcfpy.Reader.from_path(vcfFile_name)
 
@@ -447,7 +468,7 @@ result_dict_json = dict()
 #result_count = 0
 for record in reader_sv_vcf :
     #dummy_res_dict = sv_database_mapping(record,del_db_dict)
-    dummy_res_dict = binary_search_sv_mapping(record, del_db_bisect_dict, percent_overlap)
+    dummy_res_dict = binary_search_sv_mapping(record, del_db_bisect_dict, percent_overlap, genotype_mode)
 
     if dummy_res_dict != None:
         #result_dict +=1
