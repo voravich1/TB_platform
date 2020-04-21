@@ -23,7 +23,7 @@ __status__ = "Development"
 
 this_file_dir = os.path.dirname(os.path.realpath(__file__))
 drugDB = os.path.join(this_file_dir,"db","tbprofiler_drugDB.json")
-linDB = os.path.join(this_file_dir,"db","lin_tb_.csv")
+linDB = os.path.join(this_file_dir,"db","lin_tb_profiler.csv")
 
 #vcfFile_snpeff_name = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/test/98_typing_snp_snpeff.vcf"      # vcf must be snnotate with snpEff
 
@@ -473,17 +473,49 @@ print("Done read vcf")
 if lineage_decision_threshold_mode == True:
     # Iterate over all the items in dictionary to find keys with max value
     # key is lineage, value is hit count
+
+    # this flag use for check weather lineage4 is in candidate or not.
+    # True mean => force assign lineage4
+    # False mean => no need to force assign lineage4 because it already in candidate. Wether it pass or fail the judgment we are not right to force asiign it after that.
+    force_assign_lineage4 = True
+    ################################################################
+
     for key, value in lin_hit_dict.items():
         total_marker = lin_db_total_dict[key]
 
         ## check hit count with threshold to decide final lineage result
-        if key == "lineage4" or key == "lineage4.9":   ## some special lineage need special treat to re calculate hit count
+        if key == "lineage4":   ## some special lineage need special treat to re calculate hit count [only lineage4]
+            force_assign_lineage4 = False # Turn flag false => no need to assign lineage4 after this
             special_count = total_marker - value
             if special_count >= (total_marker * lineage_decision_threshold):
                 lineage_final_result_dict[key] = special_count
         else: ## normal lineage
             if value >= (total_marker * lineage_decision_threshold):
                 lineage_final_result_dict[key] = value
+
+    ## Force assign lineage4 process
+    if force_assign_lineage4 == True:
+        # Check for other main lineage and sub lineage hit except lineage4 family. If there is any main lineage or sub lineage already we will not force assign lineage 4 and 4.9 to result
+        # the status is indicate by non_lineage4_hit_flag and non_lineag4_candidate_flag. [Hard code]
+        non_lineage4_hit_flag = False
+        lineage4_hit_flag = False
+        non_main_lineage4_check_list = ["lineage1","lineage2","lineage3","lineage5","lineage6","lineage7"]
+        for key in lineage_final_result_dict:
+            dummy_lineage = key.split(".")[0]
+            if dummy_lineage in non_main_lineage4_check_list:
+                non_lineage4_hit_flag = True
+
+        ## We focus on the case that has no main lineage or sub lineage assigned rather yet. Idicate by non_lineage_hit_flag.
+        ## Force assign for lineage4 and lineage 4.9 (which is reference that we use now day, So in theory it should not match any snp marker that refer to lineage 4 and 4.9 in DB)
+        ## quite a hard code, We give a full score which is a total number of marker have in DB for it. Becuase, normally we reverse the map score for this two lineage.
+        ## As you can see it the case check above. [Noted: not sure lineage 4.9 should not be treat liek this or not]
+        ## The another weak point of this hard fix is we can not detect mix sample with lineage4
+        if non_lineage4_hit_flag == False:
+            total_marker = lin_db_total_dict["lineage4"]
+            lineage_final_result_dict["lineage4"] = total_marker
+            #total_marker = lin_db_total_dict["lineage4.9"]
+            #lineage_final_result_dict["lineage4.9"] = total_marker
+    ####################################################################################################################
 
     lineage_final_result_sorted_dict = OrderedDict(sorted(lineage_final_result_dict.items())) ## sort dict by key
 #########################################################

@@ -258,12 +258,12 @@ def collate_result(inputs, out_dir, file_target=args.target):
             lineage_export_string = "|".join(lineage_list)
 
             # extract drug resistant
-            drug_template_map = {"rifampicin": "0", "isoniazid": "0", "ethambutol": "0", "pyrazinamide": "0",
-                                 "streptomycin": "0", "fluoroquinolones": "0", "aminoglycosides": "0", "kanamycin": "0",
-                                 "amikacin": "0", "capreomycin": "0", "ethionamide": "0",
-                                 "para-aminosalicylic_acid": "0", "clofazimine": "0", "linezolid": "0",
-                                 "bedaquiline": "0", "ciprofloxacin": "0", "levofloxacin": "0", "moxifloxacin": "0",
-                                 "ofloxacin": "0"}
+            drug_template_map = {"rifampicin": 0, "isoniazid": 0, "ethambutol": 0, "pyrazinamide": 0,
+                                 "streptomycin": 0, "fluoroquinolones": 0, "aminoglycosides": 0, "kanamycin": 0,
+                                 "amikacin": 0, "capreomycin": 0, "ethionamide": 0,
+                                 "para-aminosalicylic_acid": 0, "clofazimine": 0, "linezolid": 0,
+                                 "bedaquiline": 0, "ciprofloxacin": 0, "levofloxacin": 0, "moxifloxacin": 0,
+                                 "ofloxacin": 0}
 
             drug_resist_dict = data_dict["small_variant_dr"]
             for key in drug_resist_dict:
