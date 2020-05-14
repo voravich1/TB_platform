@@ -29,7 +29,8 @@ parser = argparse.ArgumentParser(description='ADD YOUR DESCRIPTION HERE')
 parser.add_argument('-i', '--input', help='Input VCF file name (can be vcf.gz)', required=True)
 parser.add_argument('-o', '--output', help='Absolute path of Output folder', required=True)
 parser.add_argument('-d', '--lineage_del_db', help='adsolute path to lineage deletion marker database file (in tab delimit format)', nargs='?', const=1, default=del_db, required=False)
-parser.add_argument('--genotype_mode', action='store_true', help="Activate genotype mode.")
+parser.add_argument('--genotype_mode', action='store_true', help="Activate genotype mode. Specify to turn on. It will consider only homo alternate")
+parser.add_argument('--imprecise_mode', action='store_true', help="Activate imprecise mode. Specify to turn on. It will consider. It will IMPRECISE event")
 
 args = parser.parse_args()
 
@@ -195,7 +196,7 @@ def adjust_to_overlap_pos(in_start: int,in_end: int,event_size, percent_overlap)
 # Inner method for mapping sv event to database (overlap logic)
 import bisect
 
-def binary_search_sv_mapping(in_vcf_record,in_del_db_dict_bisect, percent_overlap, genotype_mode):
+def binary_search_sv_mapping(in_vcf_record,in_del_db_dict_bisect, percent_overlap, genotype_mode, imprecise_mode):
     # extract data from vcf record
     id = in_vcf_record.ID
     chr = "1" #in_vcf_record.CHROM
@@ -221,9 +222,10 @@ def binary_search_sv_mapping(in_vcf_record,in_del_db_dict_bisect, percent_overla
     # check SV type Deletion only
     sv_type = info["SVTYPE"]
     result = dict()
-    if "IMPRECISE" in info:  # cut event that has IMPRECISE flag
-        return None
-    elif sv_type != "DEL":
+    if imprecise_mode == False:
+        if "IMPRECISE" in info:  # cut event that has IMPRECISE flag
+            return None
+    if sv_type != "DEL":
         return None
     # if event has no svlen it mean it not deletion. I thinl the above case was already get rid of noisy thing already but put this case check just for safe
     start = int(in_vcf_record.POS)  # 1 based coordinate the diff of 1 based and 0 based is for start 1 based is inclusive the number you saw but 0 based is not.
@@ -444,18 +446,85 @@ def phase_one_lineage_judgement(result_dict):
     return [lineage_result,candidate_result]
 ########################################################################################################################
 
+########################################################################################################################
+## Phase one lineage classify decission tree (Hard code)
+def phase_one_lineage_judgement_revise(result_dict):
+    lineage_result = dict()
+    candidate_result = result_dict
+
+    if "RD750" in result_dict:
+        info1 = result_dict["RD750"]
+        info = info1
+        lineage_result["lineage3"] = info
+    elif "RD105_EX" in result_dict:
+        info1 = result_dict["RD105_EX"]
+        info = info1
+        lineage_result["lineage2-proto"] = info
+    elif "RD105" in result_dict or "RD181" in result_dict or "RD163n" in result_dict:
+        info = list()
+        if "RD181" in result_dict:
+            info1 = result_dict["RD181"]
+            info.append(info1)
+            lineage_result["lineage2.2.1"] = info
+        if "RD105" in result_dict:
+            info1 = result_dict["RD105"]
+            info.append(info1)
+            lineage_result["lineage2"] = info
+        if "RD163n" in result_dict:
+            info1 = result_dict["RD163n"]
+            info.append(info1)
+            lineage_result["lineage2.2.2"] = info
+        #lineage_result["lineage2"] = info
+    elif "RD239" in result_dict or "RD147c" in result_dict:
+        info = list()
+        if "RD239" in result_dict:
+            info1 = result_dict["RD239"]
+            info.append(info1)
+        if "RD147c" in result_dict:
+            info1 = result_dict["RD147c"]
+            info.append(info1)
+        lineage_result["lineage1"] = info
+
+        if "RV0209" in result_dict and "RV1004" in result_dict and "RV2531" in result_dict:
+            info1 = result_dict["RV0209"]
+            info2 = result_dict["RV1004"]
+            info3 = result_dict["RV2531"]
+            info = [info1,info2,info3]
+            lineage_result["lineage1.2.1"] = info
+            if "RD121" in result_dict:
+                info = result_dict["RD121"]
+                lineage_result["lineage1.2.1.1"] = info
+            elif "RV968" in result_dict:
+                info = result_dict["RV968"]
+                lineage_result["lineage1.2.1.2"] = info
+    elif "RD711" in result_dict:
+        info = result_dict["RD711"]
+        lineage_result["lineage5"] = info
+    elif "RD702" in result_dict:
+        info = result_dict["RD702"]
+        lineage_result["lineage6"] = info
+    else:
+        lineage_result["lineage4"] = "Not pass criteria"
+
+    return [lineage_result,candidate_result]
+########################################################################################################################
+
 vcfFile_name = args.input
 delDBFile_name = args.lineage_del_db
 genotype_mode = args.genotype_mode
+imprecise_mode = args.imprecise_mode
 
 reader_sv_vcf = vcfpy.Reader.from_path(vcfFile_name)
 
 vcfFile_basename = ntpath.basename(vcfFile_name)
-samplename = vcfFile_basename.split("_")[0]
+samplename = vcfFile_basename.split(".")[0].split("_")[0]
 #samplename = reader_sv_vcf.header.samples.names[0] ## this will return list of sample name in a header row of vcf
 
 output_json_file_name = samplename + "_result_test.json"
+#output_candidate_result_name = samplename + "_candidate_result.txt"
 json_result_file = os.path.join(args.output, output_json_file_name)
+#candidate_result_file = os.path.join(args.output, output_json_file_name)
+
 
 header_vcf = reader_sv_vcf.header
 percent_overlap = 70
@@ -468,14 +537,14 @@ result_dict_json = dict()
 #result_count = 0
 for record in reader_sv_vcf :
     #dummy_res_dict = sv_database_mapping(record,del_db_dict)
-    dummy_res_dict = binary_search_sv_mapping(record, del_db_bisect_dict, percent_overlap, genotype_mode)
+    dummy_res_dict = binary_search_sv_mapping(record, del_db_bisect_dict, percent_overlap, genotype_mode, imprecise_mode)
 
     if dummy_res_dict != None:
         #result_dict +=1
         #result_dict[result_dict] = dummy_res_dict
         result_dict.update(dummy_res_dict)
 
-lineage_final_result_dict, candidate_result_dict = phase_one_lineage_judgement(result_dict)
+lineage_final_result_dict, candidate_result_dict = phase_one_lineage_judgement_revise(result_dict)
 lineage_final_result_sorted_dict = OrderedDict(sorted(lineage_final_result_dict.items()))
 
 result_dict_json["sample_name"] = samplename

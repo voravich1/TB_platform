@@ -29,6 +29,23 @@ parser.add_argument('-o', '--output', help='Absolute path of Output folder', req
 parser.add_argument('-t', '--target', help='Extension of target input file Ex. ".vcf", ".vcf.gz"', required=True)
 
 args = parser.parse_args()
+index128colors = [
+        "#000000", "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
+        "#FFDBE5", "#7A4900", "#0000A6", "#63FFAC", "#B79762", "#004D43", "#8FB0FF", "#997D87",
+        "#5A0007", "#809693", "#FEFFE6", "#1B4400", "#4FC601", "#3B5DFF", "#4A3B53", "#FF2F80",
+        "#61615A", "#BA0900", "#6B7900", "#00C2A0", "#FFAA92", "#FF90C9", "#B903AA", "#D16100",
+        "#DDEFFF", "#000035", "#7B4F4B", "#A1C299", "#300018", "#0AA6D8", "#013349", "#00846F",
+        "#372101", "#FFB500", "#C2FFED", "#A079BF", "#CC0744", "#C0B9B2", "#C2FF99", "#001E09",
+        "#00489C", "#6F0062", "#0CBD66", "#EEC3FF", "#456D75", "#B77B68", "#7A87A1", "#788D66",
+        "#885578", "#FAD09F", "#FF8A9A", "#D157A0", "#BEC459", "#456648", "#0086ED", "#886F4C",
+        "#34362D", "#B4A8BD", "#00A6AA", "#452C2C", "#636375", "#A3C8C9", "#FF913F", "#938A81",
+        "#575329", "#00FECF", "#B05B6F", "#8CD0FF", "#3B9700", "#04F757", "#C8A1A1", "#1E6E00",
+        "#7900D7", "#A77500", "#6367A9", "#A05837", "#6B002C", "#772600", "#D790FF", "#9B9700",
+        "#549E79", "#FFF69F", "#201625", "#72418F", "#BC23FF", "#99ADC0", "#3A2465", "#922329",
+        "#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", "#A4E804", "#324E72", "#6A3A4C",
+        "#83AB58", "#001C1E", "#D1F7CE", "#004B28", "#C8D0F6", "#A3A489", "#806C66", "#222800",
+        "#BF5650", "#E83000", "#66796D", "#DA007C", "#FF1A59", "#8ADBB4", "#1E0200", "#5B4E51",
+        "#C895C5", "#320033", "#FF6832", "#66E1D3", "#CFCDAC", "#D0AC94", "#7ED379", "#012C58"]
 
 
 def get_in_file_list(in_dir, file_name_part, path_num=1, alternative_directory=None):
@@ -313,8 +330,86 @@ def collate_result(inputs, out_dir, file_target=args.target):
             collate_file.write(sample_name + "\t" + lineage_export_string + "\t" + drug_resist_type + "\t" + drug_resist_export_string + "\n")
 
     collate_file.close()
+
+def create_itol_sub_lineage_annotation_file(in_dir, out_dir, file_target="summary_result.txt"): #not finish
+    sub_lineage_itol_path = os.path.join(out_dir, "sub_lineage.itol.txt")
+
+    sub_lineage_itol = open(sub_lineage_itol_path, 'w')
+
+    sublineage_color_reserve = dict() # key=sublineage value=color hex code
+    list_sublineage_itol_text = list()
+    all_sublineage_list = list()
+    all_color_code_list = list()
+    color_count = 1
+
+    list_file = get_in_file_list(in_dir, file_target)
+    for file in list_file:
+        header = True
+        with open(file) as fp:
+            for line in fp:
+                if header:
+                    header = False
+                    continue
+
+                info_list = line.split("\t")
+                sampleID = info_list[0]
+                lineage_list = info_list[1].split("|")
+                sublineage = lineage_list[-1]
+                if sublineage == "" or len(sublineage.split(".")) <= 1:
+                    continue
+
+                if sublineage not in sublineage_color_reserve:
+                    # reserve color for this sublineage
+                    color_code = index128colors[color_count]
+                    sublineage_color_reserve[sublineage] = color_code
+                    #all_sublineage_list.append(sublineage)
+                    #all_color_code_list.append(color_count)
+                    color_count += 1
+
+                hex_color = sublineage_color_reserve[sublineage]
+                itol_text = sampleID + "\t" + hex_color
+                list_sublineage_itol_text.append(itol_text)
+
+
+    sublineage_color_reserve_sort = OrderedDict(sorted(sublineage_color_reserve.items()))  ## sort dict by key
+
+    for key,value in sublineage_color_reserve_sort.items():
+        all_sublineage_list.append(key)
+        all_color_code_list.append(value)
+
+
+
+    #### initiate header of lineage itol anotation file ####
+
+    sub_lineage_itol.write("DATASET_COLORSTRIP\n")
+    sub_lineage_itol.write("SEPARATOR TAB\n")
+    sub_lineage_itol.write("DATASET_LABEL\tSub-Lineage\n")
+    sub_lineage_itol.write("COLOR\t#ff0000\n\n")
+
+    sub_lineage_itol.write("LEGEND_TITLE\tSub-Lineage\n")
+
+    legend_shapes = ["1"]*(color_count-1)
+    legend_shapes_str = '\t'.join(legend_shapes)
+    sub_lineage_itol.write("LEGEND_SHAPES\t" + legend_shapes_str + "\n")
+
+    legend_color = '\t'.join(all_color_code_list)
+    sub_lineage_itol.write(
+        "LEGEND_COLORS\t" + legend_color + "\n")
+    legend_sublineage = '\t'.join(all_sublineage_list)
+    sub_lineage_itol.write(
+        "LEGEND_LABELS\t" + legend_sublineage + "\n\n")
+
+    ################################################
+
+    ###### Write data line #######
+    sub_lineage_itol.write("DATA\n")
+    all_data_line_itol = '\n'.join(str(x) for x in list_sublineage_itol_text)
+    sub_lineage_itol.write(all_data_line_itol)
+    sub_lineage_itol.close()
+
 # --------main---------
 
 #f_list = get_in_file_list(args.input, args.target)
 create_itol_lineage_drug_annotation_file(args.input, args.output, file_target=args.target)
 collate_result(args.input, args.output, file_target=args.target)
+create_itol_sub_lineage_annotation_file(args.output, args.output)   # recieve input and output dir. It will search for summary_result.txt file in input Dir
