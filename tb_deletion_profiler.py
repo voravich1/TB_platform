@@ -509,6 +509,130 @@ def phase_one_lineage_judgement_revise(result_dict):
     return [lineage_result,candidate_result]
 ########################################################################################################################
 
+########################################################################################################################
+## Lineage scoring and remove none highest score lineage. Infer for main lineage if main lineage not hit
+def lineage_scoring_remove_judgement(result_dict):
+    final_lineage_result_dict = dict()
+    ######################################
+    ## Force delete non majority lineage result
+    ## By scoring main lineage hit give 10 score sub lineage hit in any level give 1 score
+    ######################################
+    if len(result_dict) == 0:  ## In case that No lineage result assign we skip Force delete process
+        return final_lineage_result_dict
+
+    else:
+        lineage_score_dict = dict()
+        for key, value in result_dict.items():
+            rd_id = key
+            info = value
+            lineage = info[1]
+            dummy_lineage_split = lineage.split(".")
+            main_lineage = dummy_lineage_split[0]
+
+            ## assign score
+            score = 0
+            if len(dummy_lineage_split) == 1:
+                score = 10
+            elif len(dummy_lineage_split) > 1:
+                score = 1
+            else:
+                raise Exception('Has problem with Lineage String. It may empty?. Lineage string: {}'.format(key))
+            ################
+
+            ## put score to dict
+            if main_lineage in lineage_score_dict:
+                dummy_score = lineage_score_dict[main_lineage]
+                update_score = dummy_score + score
+                lineage_score_dict[main_lineage] = update_score
+            else:
+                lineage_score_dict[main_lineage] = score
+            #####################
+
+        ## Get highest score lineage list
+        highest_item = max(lineage_score_dict.items(), key=lambda x: x[1])
+        highest_score_lineage = highest_item[0]
+        highest_score = highest_item[1]
+
+        highest_score_lineage_list = list()
+
+        for key, value in lineage_score_dict.items():
+            if value == highest_score:
+                highest_score_lineage_list.append(key)
+        ##################################
+
+        ## Remove non highest score from final result and export highest score to final result dict
+        for key, value in result_dict.items():
+            rd_id = key
+            info = value
+            lineage = info[1]
+            dummy_lineage_split = lineage.split(".")
+            main_lineage = dummy_lineage_split[0]
+
+            if main_lineage not in highest_score_lineage_list:
+                #del result_dict[key]
+                pass
+            else:
+                lineage_string = "lineage" + str(lineage)
+
+                if lineage_string in final_lineage_result_dict:
+                    info_list = final_lineage_result_dict[lineage_string]
+                    info_list.append(info)
+                    final_lineage_result_dict[lineage_string] = info_list
+                else:
+                    info_list = list()
+                    info_list.append(info)
+                    final_lineage_result_dict[lineage_string] = info_list
+        ###############################################
+
+        ## Infer main lineage if main lineage not hit
+        main_lineage = ""
+        main_lineage_flag = False
+        for key,value in final_lineage_result_dict.items():
+            lineage_split = key.split(".")
+            main_lineage = lineage_split[0]
+
+            if len(lineage_split) == 1:
+                main_lineage_flag = True
+                break
+
+        if main_lineage_flag == False:
+            dummy_info = list()
+            dummy_info.append("Report by inference from sublineage hit")
+            final_lineage_result_dict[main_lineage] = dummy_info
+        ################################################
+
+        return final_lineage_result_dict
+
+    ######################################
+########################################################################################################################
+
+########################################################################################################################
+## check RD special case remove result if not pass
+def check_rd_special_case(result_dict):
+
+    if "RV0209" in result_dict and "RV1004" in result_dict and "RV2531" in result_dict:
+        pass
+    else:
+        if "RV0209" in result_dict:
+            del result_dict["RV0209"]
+        if "RV1004" in result_dict:
+            del result_dict["RV1004"]
+        if "RV2531" in result_dict:
+            del result_dict["RV2531"]
+
+    return result_dict
+########################################################################################################################
+
+########################################################################################################################
+## Phase OnePLUS lineage classify decission tree (Hard code)
+def phase_onePlus_lineage_judgement_revise(result_dict):
+
+    candidate_result = result_dict
+    lineage_result = lineage_scoring_remove_judgement(result_dict)
+
+    return [lineage_result,candidate_result]
+########################################################################################################################
+
 vcfFile_name = args.input
 delDBFile_name = args.lineage_del_db
 genotype_mode = args.genotype_mode
@@ -544,7 +668,8 @@ for record in reader_sv_vcf :
         #result_dict[result_dict] = dummy_res_dict
         result_dict.update(dummy_res_dict)
 
-lineage_final_result_dict, candidate_result_dict = phase_one_lineage_judgement_revise(result_dict)
+checked_result_dict = check_rd_special_case(result_dict)
+lineage_final_result_dict, candidate_result_dict = phase_onePlus_lineage_judgement_revise(checked_result_dict)
 lineage_final_result_sorted_dict = OrderedDict(sorted(lineage_final_result_dict.items()))
 
 result_dict_json["sample_name"] = samplename

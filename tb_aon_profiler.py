@@ -23,7 +23,8 @@ __status__ = "Development"
 
 this_file_dir = os.path.dirname(os.path.realpath(__file__))
 drugDB = os.path.join(this_file_dir,"db","tbprofiler_drugDB.json")
-linDB = os.path.join(this_file_dir,"db","lin_db_3916.txt")
+#linDB = os.path.join(this_file_dir,"db","lin_db_3916.txt")
+linDB = os.path.join(this_file_dir,"db","diff_maf_db")
 #linDB = os.path.join(this_file_dir,"db","lin_tb_profiler.csv")
 
 #vcfFile_snpeff_name = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/test/98_typing_snp_snpeff.vcf"      # vcf must be snnotate with snpEff
@@ -109,7 +110,7 @@ for snpEff_field in snpEff_field_order:
 ## drug database of TBprofiler is json format
 ## transform DB structure to NBT_AON structure [Gene => HGVS => Drug => Confident]
 ##########
-
+aon_drug_list = list()
 with open(drugDBFile_name) as json_file:
     data = json.load(json_file)
 
@@ -143,6 +144,9 @@ with open(drugDBFile_name) as json_file:
 
                     special_drugDB_drug_dict[drug_name] = confidence
 
+                    if drug_name not in aon_drug_list:
+                        aon_drug_list.append(drug_name)
+
                 special_drugDB_hgvs_dict[hgvs] = special_drugDB_drug_dict
                 specialcase_flag = True
             #########################################################
@@ -155,6 +159,9 @@ with open(drugDBFile_name) as json_file:
                     confidence = drug_name_dict['confidence']
 
                     drugDB_drug_dict[drug_name] = confidence
+
+                    if drug_name not in aon_drug_list:
+                        aon_drug_list.append(drug_name)
 
                 drugDB_hgvs_dict[hgvs] = drugDB_drug_dict
             ##############################################################
@@ -502,6 +509,10 @@ if lineage_decision_threshold_mode == True:
                 lineage_final_result_dict[key] = value
 
     ## Force assign lineage4 process
+    if "lineage4" not in lin_db_total_dict:
+        # last case check if no lineage4 in DB we will skip force assign process
+        force_assign_lineage4 = False
+
     if force_assign_lineage4 == True:
         # Check for other main lineage and sub lineage hit except lineage4 family. If there is any main lineage or sub lineage already we will not force assign lineage 4 to result
         # the status is indicate by non_lineage4_hit_flag and non_lineag4_candidate_flag. [Hard code]
@@ -526,6 +537,10 @@ if lineage_decision_threshold_mode == True:
     ####################################################################################################################
 
     ## Force assign lineage4.9 process
+    if "lineage4.9" not in lin_db_total_dict:
+        # last case check if no lineage4.9 in DB we will skip force assign process
+        force_assign_lineage4_9 = False
+
     if force_assign_lineage4_9 == True:
         # Check for other main lineage and sub lineage hit except lineage4.9 family. If there is any main lineage or sub lineage already we will not force assign lineage 4.9 to result
         # the status is indicate by non_lineage4_9_hit_flag and non_lineag4_9_candidate_flag. [Hard code]
