@@ -611,12 +611,16 @@ if force_delete_non_majority_lineage == True:
     ##################################
 
     ## Remove non highest score from final result
+    del_key_list = list()
     for key, value in lineage_final_result_sorted_dict.items():
         dummy_lineage_split = key.split(".")
         main_lineage = dummy_lineage_split[0]
 
         if main_lineage not in highest_score_lineage_list:
-            del lineage_final_result_sorted_dict[key]
+            del_key_list.append(key)
+            #del lineage_final_result_sorted_dict[key]
+    for key in del_key_list:
+        del lineage_final_result_sorted_dict[key]
     ###############################################
 
 ######################################

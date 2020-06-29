@@ -27,6 +27,7 @@ parser = argparse.ArgumentParser(description='ADD YOUR DESCRIPTION HERE')
 parser.add_argument('-i', '--input', help='Input folder name', required=True)
 parser.add_argument('-o', '--output', help='Absolute path of Output folder', required=True)
 parser.add_argument('-t', '--target', help='Extension of target input file Ex. ".vcf", ".vcf.gz"', required=True)
+parser.add_argument('-l', '--lindb', help='Absolute path ti lineage marker file', required=True)
 
 args = parser.parse_args()
 index128colors = [
@@ -331,17 +332,42 @@ def collate_result(inputs, out_dir, file_target=args.target):
 
     collate_file.close()
 
-def create_itol_sub_lineage_annotation_file(in_dir, out_dir, file_target="summary_result.txt"): #not finish
+def create_itol_sub_lineage_annotation_file(in_dir, out_dir, lindb, file_target="summary_result.txt"): #not finish
     sub_lineage_itol_path = os.path.join(out_dir, "sub_lineage.itol.txt")
 
     sub_lineage_itol = open(sub_lineage_itol_path, 'w')
 
-    sublineage_color_reserve = dict() # key=sublineage value=color hex code
+    ## Extract sublineage color
+    sublineage_color_reserve = dict()  # key=sublineage value=color hex code
     list_sublineage_itol_text = list()
     all_sublineage_list = list()
     all_color_code_list = list()
     color_count = 1
 
+    with open(lindb) as ldb:
+        for line in ldb:
+            no_new_line = line.split("\n")[0]
+            info = no_new_line.split("\t")
+            sublineage = info[-1]
+
+            if sublineage == "" or len(sublineage.split(".")) <= 1:
+                continue
+
+            if sublineage not in sublineage_color_reserve:
+                # reserve color for this sublineage
+                color_code = index128colors[color_count]
+                sublineage_color_reserve[sublineage] = color_code
+                # all_sublineage_list.append(sublineage)
+                # all_color_code_list.append(color_count)
+                color_count += 1
+
+    sublineage_color_reserve_sort = OrderedDict(sorted(sublineage_color_reserve.items()))  ## sort dict by key
+
+    for key, value in sublineage_color_reserve_sort.items():
+        all_sublineage_list.append(key)
+        all_color_code_list.append(value)
+    ############################################
+    ## read summary file
     list_file = get_in_file_list(in_dir, file_target)
     for file in list_file:
         header = True
@@ -355,30 +381,15 @@ def create_itol_sub_lineage_annotation_file(in_dir, out_dir, file_target="summar
                 sampleID = info_list[0]
                 lineage_list = info_list[1].split("|")
                 sublineage = lineage_list[-1]
+
                 if sublineage == "" or len(sublineage.split(".")) <= 1:
                     continue
 
-                if sublineage not in sublineage_color_reserve:
-                    # reserve color for this sublineage
-                    color_code = index128colors[color_count]
-                    sublineage_color_reserve[sublineage] = color_code
-                    #all_sublineage_list.append(sublineage)
-                    #all_color_code_list.append(color_count)
-                    color_count += 1
-
+                ## lookup color for found sublineage
                 hex_color = sublineage_color_reserve[sublineage]
                 itol_text = sampleID + "\t" + hex_color
                 list_sublineage_itol_text.append(itol_text)
-
-
-    sublineage_color_reserve_sort = OrderedDict(sorted(sublineage_color_reserve.items()))  ## sort dict by key
-
-    for key,value in sublineage_color_reserve_sort.items():
-        all_sublineage_list.append(key)
-        all_color_code_list.append(value)
-
-
-
+    ########################################################
     #### initiate header of lineage itol anotation file ####
 
     sub_lineage_itol.write("DATASET_COLORSTRIP\n")
@@ -412,4 +423,4 @@ def create_itol_sub_lineage_annotation_file(in_dir, out_dir, file_target="summar
 #f_list = get_in_file_list(args.input, args.target)
 create_itol_lineage_drug_annotation_file(args.input, args.output, file_target=args.target)
 collate_result(args.input, args.output, file_target=args.target)
-create_itol_sub_lineage_annotation_file(args.output, args.output)   # recieve input and output dir. It will search for summary_result.txt file in input Dir
+create_itol_sub_lineage_annotation_file(args.output, args.output, args.lindb)   # recieve input and output dir. It will search for summary_result.txt file in input Dir
