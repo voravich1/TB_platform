@@ -22,9 +22,10 @@ __email__ = "worawich.ph@gmail.com"
 __status__ = "Development"
 
 this_file_dir = os.path.dirname(os.path.realpath(__file__))
-drugDB = os.path.join(this_file_dir,"db","tbprofiler_drugDB.json")
-#linDB = os.path.join(this_file_dir,"db","lin_db_3916.txt")
-linDB = os.path.join(this_file_dir,"db","diff_maf_db")
+#drugDB = os.path.join(this_file_dir,"db","tbprofiler_drugDB.json")
+drugDB = os.path.join(this_file_dir,"db","thai_drug_db.json")
+linDB = os.path.join(this_file_dir,"db","lin_db_3916.txt")
+#linDB = os.path.join(this_file_dir,"db","diff_maf_db")
 #linDB = os.path.join(this_file_dir,"db","lin_tb_profiler.csv")
 
 #vcfFile_snpeff_name = "/Users/worawich/Download_dataset/TB_platform_test/test_data/test_data_bgi/test/98_typing_snp_snpeff.vcf"      # vcf must be snnotate with snpEff
@@ -141,8 +142,12 @@ with open(drugDBFile_name) as json_file:
                 for drug_name in drug_dict:
                     drug_name_dict = drug_dict[drug_name]
                     confidence = drug_name_dict['confidence']
-
-                    special_drugDB_drug_dict[drug_name] = confidence
+                    if "resistance level" in drug_name_dict:
+                        resistant_level = drug_name_dict['resistance level']
+                    else:
+                        resistant_level = "unknown"
+                    dummy_dict = {"resistance_level":resistant_level,"confidence":confidence}
+                    special_drugDB_drug_dict[drug_name] = dummy_dict
 
                     if drug_name not in aon_drug_list:
                         aon_drug_list.append(drug_name)
@@ -157,8 +162,12 @@ with open(drugDBFile_name) as json_file:
 
                     drug_name_dict = drug_dict[drug_name]
                     confidence = drug_name_dict['confidence']
-
-                    drugDB_drug_dict[drug_name] = confidence
+                    if "resistance level" in drug_name_dict:
+                        resistant_level = drug_name_dict['resistance level']
+                    else:
+                        resistant_level = "unknown"
+                    dummy_dict = {"resistance_level": resistant_level, "confidence": confidence}
+                    drugDB_drug_dict[drug_name] = dummy_dict
 
                     if drug_name not in aon_drug_list:
                         aon_drug_list.append(drug_name)

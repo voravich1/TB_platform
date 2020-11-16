@@ -291,12 +291,12 @@ def collate_result(inputs, out_dir, file_target=args.target):
                 for drug in drug_info_dict:
 
                     if drug in drug_template_map:
-                        confidence = drug_info_dict[drug]
+                        confidence = drug_info_dict[drug]['confidence']
                         if confidence == "high":
                             score = 4
                         elif confidence == "moderate":
                             score = 3
-                        elif confidence == "low":
+                        elif confidence == "low" or confidence == "minimal":
                             score = 2
                         elif confidence == "indeterminate":
                             score = 1
