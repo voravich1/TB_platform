@@ -1,23 +1,29 @@
 #!/usr/bin/env python
 
-"""This program is use to parse drug database from normal format to json format
+"""This program is use to parse drug database from tab delimit (txt) format to json format
     Compatible for use with tbprofiler and aonprofiler
 
-    Focus on convert single character protein variant annotation to
+    Capable to convert single character protein variant annotation to
     three character protein varaint annotation (HGVS format)
+    It best to have mutation in HGVS format
 
     Did not do anything on other annotation format
-    For other format please manually change it by your self
+    For other format please manually change it by your self. Sorry +_+"
+
+    Input txt format must contain 5 column
+    1. Drug - Name of the drug.
+    2. Gene - Can be gene names (e.g. inhA, katG) or locus tag (e.g. Rv0678, Rv0682)
+    3. Mutation - These must be hgvs nomenclature (e.g. p.Val139Leu, c.-15C>T)
+    4. Resistance Level - A resistance level base on MIC level or other testing. Can specify into four level “unknown, Low, Moderate and High”
+    5. Confidence Level - These contain text indicate how confidence of this mutation to be drug resistance mutation. Can specify into four level “unknown, Low, Moderate and High”
+    Noted: All gene and mutation must based on H37RV reference
+
 """
 
 import sys
 import json
-import csv
-import vcfpy
-from collections import OrderedDict
 import argparse
 import os
-from pathlib import Path
 
 __author__ = "Worawich Phornsiricharoenphant"
 __copyright__ = ""
@@ -34,14 +40,21 @@ protein_code = {"A":"Ala","R":"Arg","N":"Asn","D":"Asp","B":"Asx",
                 "F":"Phe","P":"Pro","S":"Ser","T":"Thr","W":"Trp",
                 "Y":"Tyr","V":"Val"}
 
-input_file = "/Users/worawich/Download_dataset/tb_platform/drug_db_committee/thai_drug_db_common.csv" # csv file contain drug resistant information
-output_file = "/Users/worawich/Download_dataset/tb_platform/drug_db_committee/thai_drug_db.json"
-tranform_input_file = "/Users/worawich/Download_dataset/tb_platform/drug_db_committee/TB_thai_drug_db.csv"
+
+parser = argparse.ArgumentParser(description='ADD YOUR DESCRIPTION HERE')
+parser.add_argument('-i', '--input', help='Input drug db text file.', required=True)
+parser.add_argument('-o', '--output', help='Output drug db json file', required=True)
+
+args = parser.parse_args()
+
+input_file = args.input
+output_file = args.output
+
 
 def compare_level(old_res_level,new_res_level,old_con_level,new_con_level):
 
     res_level_dict = {"high":3,"moderate":2,"low":1,"unknown":0}
-    con_level_dict = {"high":3,"moderate":2,"minimal":1,"indeterminate":0}
+    con_level_dict = {"high":3,"moderate":2,"low":1,"indeterminate":0}
 
     ## resistant level compare
     if res_level_dict[old_res_level] > res_level_dict[new_res_level]:
@@ -62,20 +75,20 @@ def compare_level(old_res_level,new_res_level,old_con_level,new_con_level):
     return select_res_level, select_con_level
 
 
-tf = open(tranform_input_file,"w")
+#tf = open(tranform_input_file,"w")
 
 drug_resist_db = dict()
-header = True
+header = False
 
 with open(input_file,"r",encoding='utf8') as f:
     for line in f:
         no_new_line = line.splitlines()
-        info = no_new_line[0].split(",")
-        drug = info[0]
+        info = no_new_line[0].split("\t")
+        drug = info[0].lower()
         gene = info[1]
         mutation = info[2]
-        resist_level = info[3].lower
-        confidence_level = info[4].lower
+        resist_level = info[3].lower()
+        confidence_level = info[4].lower()
 
         if header != True :
 
@@ -100,21 +113,13 @@ with open(input_file,"r",encoding='utf8') as f:
             else:
                 dummy_resist_level = resist_level
 
-            if dummy_resist_level == "high mic mutation":
-                resist_level = "high"
-            elif dummy_resist_level == "moderate mic mutation":
-                resist_level = "moderate"
-            elif dummy_resist_level == "low mic mutation":
-                resist_level = "low"
-            elif dummy_resist_level == "high":
+            if dummy_resist_level == "high":
                 resist_level = "high"
             elif dummy_resist_level == "moderate":
                 resist_level = "moderate"
             elif dummy_resist_level == "low":
                 resist_level = "low"
-            elif dummy_resist_level == "Resistance level unknown":
-                resist_level = "unknown"
-            elif dummy_resist_level == "-":
+            else:
                 resist_level = "unknown"
             #################################
 
@@ -123,9 +128,9 @@ with open(input_file,"r",encoding='utf8') as f:
                 confidence_level = "high"
             elif confidence_level == "moderate":
                 confidence_level = "moderate"
-            elif confidence_level == "minimal":
-                confidence_level = "minimal"
-            elif confidence_level == "-":
+            elif confidence_level == "low":
+                confidence_level = "low"
+            else:
                 confidence_level = "indeterminate"
             #################################
 
@@ -168,9 +173,9 @@ with open(input_file,"r",encoding='utf8') as f:
                 inner_variant_dict = {"drugs":drug_dict,"hgvs_mutation":mutation}
                 variant_dict = {mutation:inner_variant_dict}
                 drug_resist_db[gene] = variant_dict
-        tf.write(drug + "," + gene + "," + mutation + "," + resist_level + "," + confidence_level + "\n")
+
         header = False
-tf.close()
+
 
 with open(output_file, 'w') as fp:
     json.dump(drug_resist_db, fp)
