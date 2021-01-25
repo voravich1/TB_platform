@@ -1,28 +1,18 @@
 #!/usr/bin/env python
 
-"""This program is use to parse drug database from tab delimit (txt) format to json format
-    Compatible for use with tbprofiler and aonprofiler
+"""This program is use to convert HGVS to genome position to use witj loliplot in TBplatform only 
 
-    Capable to convert single character protein variant annotation to
-    three character protein varaint annotation (HGVS format)
-    It best to have mutation in HGVS format
-
-    Did not do anything on other annotation format
-    For other format please manually change it by your self. Sorry +_+"
-
-    Input txt format must contain 5 column
-    1. Drug - Name of the drug.
-    2. Gene - Can be gene names (e.g. inhA, katG) or locus tag (e.g. Rv0678, Rv0682)
-    3. Mutation - These must be hgvs nomenclature (e.g. p.Val139Leu, c.-15C>T)
-    4. Resistance Level - A resistance level base on MIC level or other testing. Can specify into four level “unknown, Low, Moderate and High”
-    5. Confidence Level - These contain text indicate how confidence of this mutation to be drug resistance mutation. Can specify into four level “unknown, Low, Moderate and High”
+    Input json format must be in TBDB from TBprofiler like format
     Noted: All gene and mutation must based on H37RV reference
 
-    Additional feature HGVS to Genomic positon converter (Beta test) 
+    Feature HGVS to Genomic positon converter (Beta test) 
     Convert hgvs mutation to genome position based on GFF3 file
     Currently avalible only Substitute,del,ins,dub,inv
-    Convert to additional txt file with option -c (indicate convert output filename)
     (Noted: Need deep checking for convertion correctness)
+    
+    Build for convert DB file that only has json TBDB of tbprofiler like format
+    If you have simple txt DB format. Accept by TBplatform please use another script ==> parseDrugTBDB.py
+
 """
 
 import sys
@@ -334,114 +324,25 @@ header = False
 
 gcov = open(gcov_file, "w")
 
-with open(input_file,"r",encoding='utf8') as f:
-    for line in f:
-        no_new_line = line.splitlines()
-        info = no_new_line[0].split("\t")
-        drug = info[0].lower()
-        gene = info[1]
-        mutation = info[2]
-        resist_level = info[3].lower()
-        confidence_level = info[4].lower()
+with open(input_file) as json_file:
+    data = json.load(json_file)
 
-        if header != True :
-
-            # Recorrect mutation format
-            if len(mutation.split(".")) == 1 and len(mutation.split(" ")) == 1 and mutation != "frameshift":
-                dummy = ""
-                for str in mutation:
-                    if str == "(":
-                        continue
-                    elif str == ")":
-                        continue
-                    elif str in protein_code:
-                        dummy = dummy + protein_code[str]
-                    else:
-                        dummy = dummy + str
-                mutation = "p." + dummy
-            #################################
-
-            # Recorrect resistant level
-            if len(resist_level.split("(")) > 1:
-                dummy_resist_level = resist_level.split("(")[0]
-            else:
-                dummy_resist_level = resist_level
-
-            if dummy_resist_level == "high":
-                resist_level = "high"
-            elif dummy_resist_level == "moderate":
-                resist_level = "moderate"
-            elif dummy_resist_level == "low":
-                resist_level = "low"
-            else:
-                resist_level = "unknown"
-            #################################
-
-            # Recorrect confidence
-            if confidence_level == "high":
-                confidence_level = "high"
-            elif confidence_level == "moderate":
-                confidence_level = "moderate"
-            elif confidence_level == "low":
-                confidence_level = "low"
-            else:
-                confidence_level = "indeterminate"
-            #################################
-
-
-            # put data to drug db dict
-            if gene in drug_resist_db:
-                variant_dict = drug_resist_db[gene]
-
-                if mutation in variant_dict:
-                    inner_variant_dict = variant_dict[mutation]
-                    drug_dict = inner_variant_dict["drugs"]
-                    inner_variant_dict["hgvs_mutation"] = mutation
-                    if drug in drug_dict:
-                        print("impossible\n")
-                        confidence_resist_level_dict = drug_dict[drug]
-                        dummy_res_level = confidence_resist_level_dict["resistance level"]
-                        dummy_con_level = confidence_resist_level_dict["confidence"]
-
-                        select_res_level, select_con_level = compare_level(dummy_res_level,resist_level,dummy_con_level,confidence_level)
-
-                        confidence_resist_level_dict = {"resistance level": select_res_level, "confidence": select_con_level}
-                        drug_dict[drug] = confidence_resist_level_dict
-
-                    else:
-                        confidence_resist_level_dict = {"resistance level": resist_level, "confidence": confidence_level}
-                        drug_dict[drug] = confidence_resist_level_dict
-
-                    inner_variant_dict["drugs"] = drug_dict
-                    variant_dict[mutation] = inner_variant_dict
-                else:
-                    confidence_resist_level_dict = {"resistance level": resist_level, "confidence": confidence_level}
-                    drug_dict = {drug: confidence_resist_level_dict}
-                    inner_variant_dict = {"drugs":drug_dict,"hgvs_mutation":mutation}
-                    variant_dict[mutation] = inner_variant_dict
-
-                drug_resist_db[gene] = variant_dict
-            else:
-                confidence_resist_level_dict = {"resistance level":resist_level,"confidence":confidence_level}
-                drug_dict = {drug:confidence_resist_level_dict}
-                inner_variant_dict = {"drugs":drug_dict,"hgvs_mutation":mutation}
-                variant_dict = {mutation:inner_variant_dict}
-                drug_resist_db[gene] = variant_dict
-
+    for gene in data:
+        all_variant_dict = data[gene]
+        
+        for variant in all_variant_dict:
+            hgvs_mutation = all_variant_dict[variant]["hgvs_mutation"]
+            
             #######
             # convert hgvs mutation to genome positon
             # create separate file indicate genoome posiiton and hgvs
-            convert_res = convertGenomicPosition(gff3_gene_dict,gene,mutation)
-            gcov.write(gene + "\t" + mutation + "\t" + '-'.join(convert_res))
+            convert_res = convertGenomicPosition(gff3_gene_dict,gene,hgvs_mutation)
+            gcov.write(gene + "\t" + hgvs_mutation + "\t" + '-'.join(convert_res))
             gcov.write("\n")
             ##########################################################
 
-        header = False
-
 gcov.close()
 
-with open(output_file, 'w') as fp:
-    json.dump(drug_resist_db, fp)
 
 
 
