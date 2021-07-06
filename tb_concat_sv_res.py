@@ -17,7 +17,12 @@ from pathlib import Path
 #path="/Users/worawich/Download_dataset/tb_sv/1170_sv_mantaV1_4/manta_vcf"
 #path="/Users/worawich/Downloads/1170_delprofiler/manta_vcf"
 #path="/Users/worawich/Downloads/BGI174_delprofiler/manta_vcf/del_profiler_filter_homo_res_Vplus"
-path="/Users/worawich/Download_dataset/tb_platform/delprofiler_res/252_samples/del_profiler_filter_homo_res_Vwas"
+#path="/Users/worawich/Download_dataset/tb_platform/delprofiler_res/252_samples/del_profiler_filter_homo_res_Vwas"
+#path="/Users/worawich/Downloads/mrsa/manta_vcf"
+#path="/Users/worawich/Downloads/mrsa/manta_candidate_vcf"
+#path="/Volumes/Macintosh HD/Users/worawich/Downloads/TB_del_paper/1170_x_manilla/analysis/sv/low_stringent/vcf"
+#path="/Volumes/Macintosh HD/Users/worawich/Downloads/mrsa/manta_vcf_st5_tu"
+path="/Users/worawich/Downloads/mrsa/manta_vcf_st5_tu_candidate"
 #path="/Volumes/4TB_WD/TB/Martin_new_list/TB_result_BWA_SV_Ver/manta/vcf_ann"
 list_target_sample_file="/Volumes/4TB_WD/TB/Martin_new_list/TB_result_BWA_SV_Ver/manta/list_L1_1_1.txt"
 sum_by_target = False
@@ -65,10 +70,14 @@ for file in list_of_files.values():
     else:
         with open(file,'rt') as fp:
             f = Path(file)
-            samplename_from_filename = f.name.split("_")[0]
+            samplename_from_filename = f.name.split(".")[0]
             for line in fp:
                 if line[0] == '#' and line[1] != '#':
-                    samplename = line.split()[9]
+                    line_info = line.split()
+                    if len(line_info) < 10:
+                        samplename = os.path.basename(file).split(".")[0]
+                    else:
+                        samplename = line_info[9]
                 elif line[0] != '#':
                     #new_line = samplename + "\t" + line
                     new_line = samplename_from_filename + "\t" + line
