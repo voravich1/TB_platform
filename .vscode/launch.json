@@ -1,0 +1,16 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args":["-i","/Users/worawich/Downloads/tb_platform/db/tbdb_drug_22_01_2022.txt","-o","/Users/worawich/Downloads/tb_platform/db/NEW_drug_db_example.json","-c","/Users/worawich/Downloads/tb_platform/db/drug_db_example_COV.txt","-g","/Users/worawich/Downloads/tb_platform/ref/Mycobacterium_tuberculosis_h37rv.ASM19595v2.gff3"]
+        }
+    ]
+}

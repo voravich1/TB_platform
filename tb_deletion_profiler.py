@@ -585,23 +585,66 @@ def lineage_scoring_remove_judgement(result_dict):
         ###############################################
 
         ## Infer main lineage if main lineage not hit
-        main_lineage = ""
-        main_lineage_flag = False
-        for key,value in final_lineage_result_dict.items():
-            lineage_split = key.split(".")
-            main_lineage = lineage_split[0]
+        #main_lineage = ""
+        #main_lineage_flag = False
+        #for key,value in final_lineage_result_dict.items():
+            #lineage_split = key.split(".")
+            #main_lineage = lineage_split[0]
 
-            if len(lineage_split) == 1:
-                main_lineage_flag = True
-                break
+            #if len(lineage_split) == 1:
+                #main_lineage_flag = True
+                #break
 
-        if main_lineage_flag == False:
-            dummy_info = list()
-            dummy_info.append("Report by inference from sublineage hit")
-            final_lineage_result_dict[main_lineage] = dummy_info
+        #if main_lineage_flag == False:
+            #dummy_info = list()
+            #dummy_info.append("Report by inference from sublineage hit")
+            #final_lineage_result_dict[main_lineage] = dummy_info
         ################################################
 
-        return final_lineage_result_dict
+        ## Check Hirachical of lineage result
+        # loop lineage result to create lineage tier dict
+        lineage_tier_dict = OrderedDict()
+        for key,value in final_lineage_result_dict.items():
+            lineage = key
+            lineage_split = key.split(".")
+            main_lineage = lineage_split[0]
+            lineage_tier = len(lineage_split)
+
+            if lineage_tier in lineage_tier_dict.key():
+                lineage_list = lineage_tier_dict[lineage_tier]
+
+                if lineage not in lineage_list:
+                    lineage_list.append(lineage)
+                    lineage_tier_dict[lineage_tier] = lineage_list
+            else:
+                lineage_list = [lineage]
+                lineage_tier_dict[lineage_tier] = lineage_list
+
+        # loop lineage tier dict to check hirachical of lineage
+        pass_result_dict = dict()
+        previous_lineage_tier = 1
+        for key,value in lineage_tier_dict.items():
+            lineage_tier = key
+            lineage_list = value
+
+            if lineage_tier > 1:
+                previous_tier_lineage_list = lineage_tier_dict(previous_lineage_tier)
+                for lineage in lineage_list:
+                    dot = "."
+                    lineage_split = lineage.split(".")[:-1] # get all element except last element
+                    previous_tier_lineage = dot.join(lineage_split)
+
+                    if previous_tier_lineage in previous_tier_lineage_list:
+                        pass_result_dict[lineage] = final_lineage_result_dict[lineage]
+            else:
+                pass_result_dict[lineage] = final_lineage_result_dict[lineage]
+
+            previous_lineage_tier = key      
+
+        ################################################ 
+
+        #return final_lineage_result_dict
+        return pass_result_dict
 
     ######################################
 ########################################################################################################################

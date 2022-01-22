@@ -345,20 +345,22 @@ with open(input_file,"r",encoding='utf8') as f:
         confidence_level = info[4].lower()
 
         if header != True :
-
-            # Recorrect mutation format
+            not_protein_flag = 0
+            # Recorrect mutation format [Recorrect for WHO mutatuon symbol]
             if len(mutation.split(".")) == 1 and len(mutation.split(" ")) == 1 and mutation != "frameshift":
                 dummy = ""
-                for str in mutation:
-                    if str == "(":
+                for mutation_str in mutation:
+                    if mutation_str == "(":
                         continue
-                    elif str == ")":
+                    elif mutation_str == ")":
                         continue
-                    elif str in protein_code:
-                        dummy = dummy + protein_code[str]
+                    elif mutation_str in protein_code:
+                        dummy = dummy + protein_code[mutation_str]
+                        not_protein_flag = 1
                     else:
-                        dummy = dummy + str
-                mutation = "p." + dummy
+                        dummy = dummy + mutation_str
+                if not_protein_flag == 1: ## if it not protien. it is special case. we will not change it format.
+                    mutation = "p." + dummy
             #################################
 
             # Recorrect resistant level
